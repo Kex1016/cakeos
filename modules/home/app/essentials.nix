@@ -1,0 +1,53 @@
+{ pkgs, inputs, ... }:
+
+let
+  spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+in
+{
+  home.packages = with pkgs; [
+    pavucontrol
+    gnome-font-viewer
+    qpwgraph
+    inotify-tools
+    file
+    jetbrains.idea-oss
+    yubioath-flutter
+    easyeffects
+  ];
+
+  xdg.autostart.enable = true;
+
+  programs = {
+    mpv = {
+      enable = true;
+    };
+
+    spicetify = {
+      enable = true;
+      enabledExtensions = with spicePkgs.extensions; [
+        adblockify
+        hidePodcasts
+        shuffle
+      ];
+    };
+
+    zathura = {
+      enable = true;
+    };
+
+    keepassxc = {
+      enable = true;
+      autostart = true;
+    };
+  };
+
+  services = {
+    kdeconnect = {
+      enable = true;
+      indicator = true;
+    };
+    easyeffects = {
+      enable = true;
+    };
+  };
+}

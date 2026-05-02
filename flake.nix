@@ -1,0 +1,91 @@
+{
+  description = "The main OS flake for CakeOS.";
+
+  inputs = {
+    # Utils
+    systems.url = "github:nix-systems/x86_64-linux";
+    flake-utils = {
+      url = "github:numtide/flake-utils";
+      inputs.systems.follows = "systems";
+    };
+
+    # OS
+    nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Packages
+    nur = {
+      url = "github:nix-community/NUR";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nvf = {
+      url = "github:mana-byte/nvf-configuration";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    zen-browser = {
+      url = "github:0xc000022070/zen-browser-flake";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        home-manager.follows = "home-manager";
+      };
+    };
+    nix-flatpak.url = "github:gmodena/nix-flatpak";
+    spicetify-nix.url = "github:Gerg-L/spicetify-nix";
+  };
+
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }@inputs:
+    let
+      system = "x86_64-linux";
+
+      lib = nixpkgs.lib;
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        overlays = [
+          nur.overlays.default
+          nix-cachyos-kernel.overlays.pinned
+        ];
+      };
+
+      specialArgs = {
+        inherit inputs;
+      };
+
+      commonHomeModules = [
+        inputs.nix-flatpak.homeManagerModules.nix-flatpak
+        inputs.zen-browser.homeModules.beta
+        (inputs.spicetify-nix.homeManagerModules.default)
+      ];
+
+      commonSystemModules = [
+        inputs.home-manager.nixosModules.home-manager
+        (inputs.spicetify-nix.nixosModules.spicetify)
+        {
+          home-manager = {
+            extraSpecialArgs = specialArgs;
+            useGlobalPkgs = true;
+            useUserPackages = true;
+            backupFileExtension = "bak";
+          };
+        }
+      ];
+    in
+    {
+      nixosConfigurations = {
+
+      };
+    };
+}
