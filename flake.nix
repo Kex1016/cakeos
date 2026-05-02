@@ -46,6 +46,7 @@
       self,
       nixpkgs,
       flake-utils,
+      ...
     }@inputs:
     let
       system = "x86_64-linux";
@@ -55,8 +56,8 @@
         inherit system;
         config.allowUnfree = true;
         overlays = [
-          nur.overlays.default
-          nix-cachyos-kernel.overlays.pinned
+          inputs.nur.overlays.default
+          inputs.nix-cachyos-kernel.overlays.pinned
         ];
       };
 
@@ -79,13 +80,44 @@
             useGlobalPkgs = true;
             useUserPackages = true;
             backupFileExtension = "bak";
+            sharedModules = commonHomeModules;
           };
         }
       ];
     in
     {
       nixosConfigurations = {
+        universe = lib.nixosSystem {
+          inherit system pkgs specialArgs;
+          modules = commonSystemModules ++ [
+            ./systems/universe/configuration.nix
+            {
+              home-manager.users.majo = import ./systems/universe/home.nix;
+            }
+          ];
+        };
 
+        tarot = lib.nixosSystem {
+          inherit system pkgs specialArgs;
+          modules = commonSystemModules ++ [
+            ./systems/tarot/configuration.nix
+            {
+              home-manager.users.cakeos = import ./systems/tarot/home.nix;
+            }
+          ];
+        };
+
+        installer = lib.nixosSystem {
+          inherit system pkgs specialArgs;
+          modules = commonSystemModules ++ [
+            "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-base.nix"
+            inputs.disko.nixosModules.disko
+            ./systems/installer/configuration.nix
+            {
+              home-manager.users.cakeos = import ./systems/installer/home.nix;
+            }
+          ];
+        };
       };
     };
 }

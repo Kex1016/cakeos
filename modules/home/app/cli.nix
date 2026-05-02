@@ -25,10 +25,10 @@
     android-tools
     scrcpy
     _7zz
-    nix-alien
+    #nix-alien
     gpu-screen-recorder
     docker-compose
-    inputs.nvf.packages.${pkgs.system}.default
+    inputs.nvf.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 
   programs = {

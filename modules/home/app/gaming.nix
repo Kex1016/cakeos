@@ -7,8 +7,8 @@
     xivlauncher
     protonplus
     etterna
-    (pkgs.nexusmods-app.override { _7zz = pkgs._7zz-rar; })
+    #(pkgs.nexusmods-app.override { _7zz = pkgs._7zz-rar; })
     ocelot-desktop
-    inputs.hytale-launcher.packages.${pkgs.stdenv.hostPlatform.system}.default
+    #inputs.hytale-launcher.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 }
