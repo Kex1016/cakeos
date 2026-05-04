@@ -1,4 +1,4 @@
-{ ... }:
+{ lib, ... }:
 
 {
   imports = [
@@ -16,9 +16,10 @@
     ../../modules/home/plasma/symlinks.nix
     ../../modules/home/plasma/userDirs.nix
     ../../modules/home/shell/fish.nix
+    ../../modules/home/plasma/styles.nix
   ];
 
   home.username = "majo";
-  home.homeDirectory = "/home/majo";
+  home.homeDirectory = lib.mkForce "/home/majo";
   home.stateVersion = "26.05";
 }

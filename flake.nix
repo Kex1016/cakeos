@@ -39,6 +39,11 @@
     };
     nix-flatpak.url = "github:gmodena/nix-flatpak";
     spicetify-nix.url = "github:Gerg-L/spicetify-nix";
+    kwin-effects-glass = {
+      url = "github:4v3ngR/kwin-effects-glass";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    millennium.url = "github:SteamClientHomebrew/Millennium?dir=packages/nix";
   };
 
   outputs =
@@ -58,6 +63,7 @@
         overlays = [
           inputs.nur.overlays.default
           inputs.nix-cachyos-kernel.overlays.pinned
+          inputs.millennium.overlays.default
         ];
       };
 
@@ -72,6 +78,7 @@
       ];
 
       commonSystemModules = [
+        inputs.disko.nixosModules.disko
         inputs.home-manager.nixosModules.home-manager
         (inputs.spicetify-nix.nixosModules.spicetify)
         {
@@ -109,13 +116,10 @@
 
         installer = lib.nixosSystem {
           inherit system pkgs specialArgs;
-          modules = commonSystemModules ++ [
+          modules = [
             "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-base.nix"
             inputs.disko.nixosModules.disko
             ./systems/installer/configuration.nix
-            {
-              home-manager.users.cakeos = import ./systems/installer/home.nix;
-            }
           ];
         };
       };
