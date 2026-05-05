@@ -4,5 +4,4 @@
     qt6ct
     qt5ct
   ];
-  qt.platformTheme.name = "qtct";
 }

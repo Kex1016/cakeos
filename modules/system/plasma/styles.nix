@@ -5,5 +5,4 @@
     inputs.glass.packages.${pkgs.system}.glass-qt5
     inputs.glass.packages.${pkgs.system}.glass-qt6
   ];
-  qt.platformTheme = "qt5ct";
 }
