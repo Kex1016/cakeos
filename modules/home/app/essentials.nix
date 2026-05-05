@@ -50,4 +50,12 @@ in
       enable = true;
     };
   };
+
+  home.file.".local/bin" = {
+    source = ../../../scripts;
+    recursive = true;
+    executable = true;
+  };
+
+  home.sessionPath = [ "$HOME/.local/bin" ];
 }
