@@ -26,19 +26,14 @@ in
     mode = "0444";
   };
 
-  # Autologin root on tty1 — bash will then pick up /root/.bashrc
+  # Autologin root on tty1
   services.getty.autologinUser = lib.mkForce "root";
   users.users.root.shell = pkgs.bash;
 
-  # Write /root/.bashrc via activation script so it exists at login time.
-  # .bashrc is read by bash for interactive shells.
-  system.activationScripts.rootBashProfile.text = ''
-    mkdir -p /root
-    cat > /root/.bashrc << 'EOF'
-    export TERM="linux"
-    exec /etc/cake-install.sh
-    EOF
-    chmod 600 /root/.bashrc
+  programs.bash.loginShellInit = ''
+    if [[ "$(tty)" == "/dev/tty1" ]]; then
+      exec /etc/cake-install.sh
+    fi
   '';
 
   environment.systemPackages = with pkgs; [
