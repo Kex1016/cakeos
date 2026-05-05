@@ -112,9 +112,13 @@ if (( RAM_GB > 16 )); then SWAP_SIZE="24G"; elif (( RAM_GB > 0 )); then SWAP_SIZ
 
 # Tmpfs
 USE_RAMDISK=false
-if (( RAM_GB > 32 )); then
-    if confirm "RAM Disk" "You have ${RAM_GB}GB of RAM. Enable tmpfs for volatile directories (/tmp, /run) for better performance?"; then
+USE_ETC_TMPFS=false
+if (( RAM_GB > 16 )); then
+    if confirm "Performance" "Enable tmpfs for volatile directories (/tmp, /var/cache)?"; then
         USE_RAMDISK=true
+    fi
+    if confirm "Impermanence" "Move /etc to tmpfs? (Reduces disk wear, requires 1GB RAM)"; then
+        USE_ETC_TMPFS=true
     fi
 fi
 
@@ -173,7 +177,7 @@ USER_HASH=$(echo "$USER_PASS" | mkpasswd -m sha-512 -s)
 ROOT_HASH=$(echo "$ROOT_PASS" | mkpasswd -m sha-512 -s)
 
 # Confirmation
-SUMMARY="Ready to install CakeOS.\n\n  Disk:    $SELECTED_DISK\n  Config:  $SELECTED_CONFIG\n  Host:    $HOSTNAME\n  User:    $USERNAME\n  Swap:    $SWAP_SIZE\n  Tmpfs:   $USE_RAMDISK\n\n⚠ THIS WILL ERASE ALL DATA ON $SELECTED_DISK!"
+SUMMARY="Ready to install CakeOS.\n\n  Disk:    $SELECTED_DISK\n  Config:  $SELECTED_CONFIG\n  Host:    $HOSTNAME\n  User:    $USERNAME\n  Swap:    $SWAP_SIZE\n  Tmpfs:   $USE_RAMDISK\n  EtcTmp:  $USE_ETC_TMPFS\n\n⚠ THIS WILL ERASE ALL DATA ON $SELECTED_DISK!"
 confirm "Confirm Installation" "$SUMMARY" || { clear; exit 0; }
 
 # Installation
@@ -192,12 +196,13 @@ chmod -R +w /mnt/etc/cakeos
 log "Capturing hardware config"
 echo "==> Capturing hardware configuration..."
 nixos-generate-config --root /mnt >> "$LOG_FILE" 2>&1
-mv /mnt/etc/nixos/hardware-configuration.nix "/mnt/etc/cakeos/systems/$SELECTED_CONFIG/hardware-configuration.nix"
+mkdir -p /mnt/etc/cakeos/gen
+mv /mnt/etc/nixos/hardware-configuration.nix "/mnt/etc/cakeos/gen/$SELECTED_CONFIG-hardware.nix"
 rm -rf /mnt/etc/nixos
 
 log "Writing user settings"
 echo "==> Writing user and system settings..."
-cat > "/mnt/etc/cakeos/systems/installer/user-settings.nix" <<EOF
+cat > "/mnt/etc/cakeos/gen/$SELECTED_CONFIG.nix" <<EOF
 { ... }:
 {
   networking.hostName = "$HOSTNAME";
@@ -212,6 +217,9 @@ cat > "/mnt/etc/cakeos/systems/installer/user-settings.nix" <<EOF
 $(if [[ "$USE_RAMDISK" == "true" ]]; then
 echo '    "/tmp" = { device = "tmpfs"; fsType = "tmpfs"; options = [ "defaults" "size=4G" "mode=1777" ]; };'
 echo '    "/var/cache" = { device = "tmpfs"; fsType = "tmpfs"; options = [ "defaults" "size=2G" ]; };'
+fi)
+$(if [[ "$USE_ETC_TMPFS" == "true" ]]; then
+echo '    "/etc" = { device = "tmpfs"; fsType = "tmpfs"; options = [ "defaults" "size=1G" "mode=755" ]; neededForBoot = true; };'
 fi)
   };
 }

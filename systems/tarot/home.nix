@@ -8,6 +8,7 @@
     ../../modules/home/app/flatpak.nix
     ../../modules/home/plasma/kitty.nix
     ../../modules/home/plasma/userDirs.nix
+    ../../modules/home/plasma/styles.nix
     ../../modules/home/shell/fish.nix
   ];
 

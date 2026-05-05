@@ -44,6 +44,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     millennium.url = "github:SteamClientHomebrew/Millennium?dir=packages/nix";
+    glass.url = "github:4v3ngR/Glass";
   };
 
   outputs =

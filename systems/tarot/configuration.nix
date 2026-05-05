@@ -1,13 +1,14 @@
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
 
 {
   imports = [
-    ./hardware-configuration.nix
-    ../installer/user-settings.nix
+    ../../gen/tarot-hardware.nix
+    ../../gen/tarot.nix
     ../../modules/system/plasma/boot.nix
     ../../modules/system/plasma/fonts.nix
     ../../modules/system/plasma/updater.nix
     ../../modules/system/plasma/wm.nix
+    ../../modules/system/plasma/styles.nix
   ];
 
   services.flatpak.enable = true;

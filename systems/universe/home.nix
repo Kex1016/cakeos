@@ -15,8 +15,8 @@
     ../../modules/home/plasma/kitty.nix
     ../../modules/home/plasma/symlinks.nix
     ../../modules/home/plasma/userDirs.nix
-    ../../modules/home/shell/fish.nix
     ../../modules/home/plasma/styles.nix
+    ../../modules/home/shell/fish.nix
   ];
 
   home.username = "majo";

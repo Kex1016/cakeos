@@ -30,6 +30,16 @@
             };
           };
 
+          cakeos = {
+            size = "1G";
+            content = {
+              type = "filesystem";
+              format = "ext4";
+              mountpoint = "/etc/cakeos";
+              mountOptions = [ "defaults" ];
+            };
+          };
+
           root = {
             size = "100%";
             content = {

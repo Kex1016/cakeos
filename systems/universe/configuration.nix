@@ -2,8 +2,8 @@
 
 {
   imports = [
-    ./hardware-configuration.nix
-    ../installer/user-settings.nix
+    ../../gen/universe-hardware.nix
+    ../../gen/universe.nix
     ../../modules/system/plasma/boot.nix
     ../../modules/system/plasma/fonts.nix
     ../../modules/system/plasma/gaming.nix
@@ -12,6 +12,7 @@
     ../../modules/system/apps/steam.nix
     ../../modules/system/apps/ntsync.nix
     ../../modules/system/apps/vpn.nix
+    ../../modules/system/plasma/styles.nix
     #../../modules/system/apps/mongo.nix
   ];
 
