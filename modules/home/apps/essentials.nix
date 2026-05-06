@@ -13,6 +13,7 @@ in
     jetbrains.idea-oss
     yubioath-flutter
     easyeffects
+    onlyoffice-desktopeditors
   ];
 
   xdg.autostart.enable = true;
