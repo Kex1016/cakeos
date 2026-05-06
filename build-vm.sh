@@ -3,6 +3,25 @@ set -e
 
 TARGET=${1:-installer}
 
+# Cleanup function for presets
+cleanup() {
+    if [[ "$TARGET" == "universe" || "$TARGET" == "tarot" ]]; then
+        echo "Cleaning up preset files for $TARGET..."
+        rm -f gen/"$TARGET".nix gen/"$TARGET"-hardware.nix
+        rmdir gen 2>/dev/null || true
+    fi
+}
+
+# Trap signals for cleanup
+trap cleanup EXIT INT TERM
+
+if [[ "$TARGET" == "universe" || "$TARGET" == "tarot" ]]; then
+    mkdir -p gen
+    echo "Applying VM presets for $TARGET (autologin enabled)..."
+    cp gen-presets/"$TARGET".nix gen/"$TARGET".nix
+    cp gen-presets/"$TARGET"-hardware.nix gen/"$TARGET"-hardware.nix
+fi
+
 echo "Building the NixOS configuration: $TARGET..."
 
 if [ "$TARGET" = "installer" ]; then
