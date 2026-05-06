@@ -2,27 +2,37 @@
 set -e
 
 TARGET=${1:-installer}
+CURRENT_DIR=$(pwd)
 
-# Cleanup function for presets
+# Create temp directory
+TEMP_DIR=$(mktemp -d)
+echo "Created temporary workspace at $TEMP_DIR"
+
+# Cleanup function for temp workspace
 cleanup() {
-    if [[ "$TARGET" == "universe" || "$TARGET" == "tarot" ]]; then
-        echo "Cleaning up preset files for $TARGET..."
-        rm -f gen/"$TARGET".nix gen/"$TARGET"-hardware.nix
-        rmdir gen 2>/dev/null || true
-    fi
+    echo "Cleaning up temporary workspace..."
+    rm -rf "$TEMP_DIR"
 }
 
 # Trap signals for cleanup
 trap cleanup EXIT INT TERM
 
+# Copy project to temp dir, excluding large/irrelevant files
+# This "degits" the flake so Nix can see untracked files
+echo "Copying flake to temporary workspace..."
+rsync -a --exclude=".git" --exclude="result" --exclude="*.qcow2" . "$TEMP_DIR/"
+
 if [[ "$TARGET" == "universe" || "$TARGET" == "tarot" ]]; then
-    mkdir -p gen
+    mkdir -p "$TEMP_DIR/gen"
     echo "Applying VM presets for $TARGET (autologin enabled)..."
-    cp gen-presets/"$TARGET".nix gen/"$TARGET".nix
-    cp gen-presets/"$TARGET"-hardware.nix gen/"$TARGET"-hardware.nix
+    cp "$CURRENT_DIR/gen-presets/$TARGET.nix" "$TEMP_DIR/gen/$TARGET.nix"
+    cp "$CURRENT_DIR/gen-presets/$TARGET-hardware.nix" "$TEMP_DIR/gen/$TARGET-hardware.nix"
 fi
 
 echo "Building the NixOS configuration: $TARGET..."
+
+# Run build in temp dir
+pushd "$TEMP_DIR" > /dev/null
 
 if [ "$TARGET" = "installer" ]; then
     nix build .#nixosConfigurations."$TARGET".config.system.build.isoImage
@@ -47,3 +57,5 @@ else
     echo "Running the VM for $TARGET with 8GB RAM and 4 cores..."
     QEMU_OPTS="-m 8192 -smp 4 -vga virtio -display sdl,gl=on" ./result/bin/run-"$TARGET"-vm
 fi
+
+popd > /dev/null
