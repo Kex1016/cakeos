@@ -1,0 +1,81 @@
+name: Build and Release ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., v1.0.0). If empty, a timestamp-based tag will be used.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Magic Nix Cache
+        uses: determinate-systems/magic-nix-cache-action@v2
+
+      - name: Build ISO
+        run: nix build .#nixosConfigurations.installer.config.system.build.isoImage
+
+      - name: Prepare Release
+        id: prepare
+        run: |
+          ISO_PATH=$(ls result/iso/*.iso)
+          ISO_NAME=$(basename $ISO_PATH)
+          
+          TAG_NAME="${{ github.event.inputs.tag_name }}"
+          if [ -z "$TAG_NAME" ]; then
+            TAG_NAME="v$(date +'%Y.%m.%d-%H%M')"
+          fi
+          
+          echo "iso_path=$ISO_PATH" >> $GITHUB_OUTPUT
+          echo "iso_name=$ISO_NAME" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Upload ISO as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.prepare.outputs.iso_name }}
+          path: ${{ steps.prepare.outputs.iso_path }}
+          retention-days: 1
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prepare.outputs.tag_name }}
+          name: Release ${{ steps.prepare.outputs.tag_name }}
+          files: ${{ steps.prepare.outputs.iso_path }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete Artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+            });
+            for (const artifact of artifacts.artifacts) {
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+              });
+            }
