@@ -2,10 +2,10 @@
 
 {
   imports = [
-    ../../modules/home/app/browsers.nix
-    ../../modules/home/app/cli.nix
-    ../../modules/home/app/essentials.nix
-    ../../modules/home/app/flatpak.nix
+    ../../modules/home/apps/browsers.nix
+    ../../modules/home/apps/cli.nix
+    ../../modules/home/apps/essentials.nix
+    ../../modules/home/apps/flatpak.nix
     ../../modules/home/plasma/kitty.nix
     ../../modules/home/plasma/userDirs.nix
     ../../modules/home/plasma/styles.nix

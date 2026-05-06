@@ -2,16 +2,16 @@
 
 {
   imports = [
-    ../../modules/home/app/browsers.nix
-    ../../modules/home/app/cli.nix
-    ../../modules/home/app/editors.nix
-    ../../modules/home/app/essentials.nix
-    ../../modules/home/app/extras.nix
-    ../../modules/home/app/flatpak.nix
-    ../../modules/home/app/gaming.nix
-    ../../modules/home/app/obs-studio.nix
-    ../../modules/home/app/vesktop.nix
-    ../../modules/home/app/vscode.nix
+    ../../modules/home/apps/browsers.nix
+    ../../modules/home/apps/cli.nix
+    ../../modules/home/apps/editors.nix
+    ../../modules/home/apps/essentials.nix
+    ../../modules/home/apps/extras.nix
+    ../../modules/home/apps/flatpak.nix
+    ../../modules/home/apps/gaming.nix
+    ../../modules/home/apps/obs-studio.nix
+    ../../modules/home/apps/vesktop.nix
+    ../../modules/home/apps/vscode.nix
     ../../modules/home/plasma/kitty.nix
     ../../modules/home/plasma/symlinks.nix
     ../../modules/home/plasma/userDirs.nix
