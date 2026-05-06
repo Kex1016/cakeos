@@ -28,7 +28,7 @@ die() {
 }
 
 confirm() {
-    dialog --backtitle "$BACKTITLE" --title "$1" --yesno "$2" 10 65
+    dialog --backtitle "$BACKTITLE" --title "$1" --yesno "$2" 0 0
 }
 
 input_box() {
@@ -46,6 +46,10 @@ check_internet() {
 }
 
 setup_wifi() {
+    if ! confirm "No Internet" "No internet connection detected. Would you like to set up WiFi?"; then
+        return 0
+    fi
+
     local device
     device=$(iw dev | awk '$1=="Interface"{print $2}' | head -n 1)
     
@@ -53,6 +57,9 @@ setup_wifi() {
         dialog --backtitle "$BACKTITLE" --title "WiFi" --msgbox "No WiFi adapter detected. Please connect an Ethernet cable." 8 60
         return 1
     fi
+
+    # Ensure the interface is up before scanning
+    ip link set "$device" up || true
 
     dialog --backtitle "$BACKTITLE" --infobox "Scanning for WiFi networks..." 3 40
     local ssids
@@ -99,9 +106,7 @@ setup_wifi() {
 log "Installer started"
 
 if ! check_internet; then
-    if confirm "No Internet" "No internet connection detected. Would you like to set up WiFi?"; then
-        setup_wifi || true
-    fi
+    setup_wifi
 fi
 
 # Specs
