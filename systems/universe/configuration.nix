@@ -7,7 +7,6 @@
     ../../modules/system/plasma/boot.nix
     ../../modules/system/plasma/fonts.nix
     ../../modules/system/plasma/gaming.nix
-    ../../modules/system/plasma/updater.nix
     ../../modules/system/plasma/wm.nix
     ../../modules/system/apps/steam.nix
     ../../modules/system/apps/ntsync.nix
