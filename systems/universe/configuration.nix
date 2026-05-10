@@ -12,6 +12,7 @@
     ../../modules/system/apps/ntsync.nix
     ../../modules/system/apps/vpn.nix
     ../../modules/system/plasma/styles.nix
+    ../../modules/system/core/locale.nix
     #../../modules/system/apps/mongo.nix
   ];
 

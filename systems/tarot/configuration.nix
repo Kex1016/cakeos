@@ -8,6 +8,7 @@
     ../../modules/system/plasma/fonts.nix
     ../../modules/system/plasma/wm.nix
     ../../modules/system/plasma/styles.nix
+    ../../modules/system/core/locale.nix
   ];
 
   services.flatpak.enable = true;
