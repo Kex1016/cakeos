@@ -3,6 +3,6 @@
 {
   xdg.userDirs = {
     enable = true;
-    createDirectories = false;
+    createDirectories = true;
   };
 }
