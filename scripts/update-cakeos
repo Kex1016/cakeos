@@ -11,129 +11,76 @@ REPO_URL="git@github.com:Kex1016/cakeos.git"
 # REPO_URL="https://github.com/Kex1016/cakeos.git"
 
 BRANCH="main"
+TARGET_DIR="/etc/cakeos"
 
-# Identify the repository root
-# 1. Check if a directory was passed as an argument
-# 2. Check if the script's real location is inside a cakeos repo
-# 3. Default to /etc/cakeos
-REAL_SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-REAL_SCRIPT_DIR="$(dirname "$REAL_SCRIPT_PATH")"
-
-if [ -n "$1" ] && [ -d "$1" ]; then
-    TARGET_DIR="$(cd "$1" && pwd)"
-    shift # Remove the directory from arguments
-elif [[ -f "$REAL_SCRIPT_DIR/../flake.nix" ]]; then
-    TARGET_DIR="$(cd "$REAL_SCRIPT_DIR/.." && pwd)"
-else
-    TARGET_DIR="/etc/cakeos"
-fi
-
-# Ensure we are running as root if updating /etc/cakeos
-if [[ "$TARGET_DIR" == "/etc/cakeos" ]] && [ "$EUID" -ne 0 ]; then
+# Ensure we are running as root
+if [ "$EUID" -ne 0 ]; then
     echo "==> This script needs root privileges to update $TARGET_DIR."
     echo "==> Requesting sudo..."
-    exec sudo "$0" "$TARGET_DIR" "$@"
+    exec sudo "$0" "$@"
 fi
 
+# Ensure target directory exists
+mkdir -p "$TARGET_DIR"
 cd "$TARGET_DIR"
 
 echo "==> Updating CakeOS configuration in $TARGET_DIR..."
 
-if [[ "$TARGET_DIR" == "/etc/cakeos" ]]; then
-    # For /etc/cakeos, we must NEVER have a .git folder or Nix will ignore 'gen/'
-    echo "==> Target is /etc/cakeos. Using clean sync method..."
-    
-    # Ensure any old .git is gone
-    [ -d ".git" ] && rm -rf .git && echo "==> Removed existing .git folder to keep 'gen/' visible."
-
-    TMP_DIR=$(mktemp -d)
-    echo "==> Cloning latest changes to temporary directory..."
-    if ! git clone --depth 1 -q "$REPO_URL" "$TMP_DIR"; then
-        echo "!!! Error: Clone failed."
-        rm -rf "$TMP_DIR"
-        exit 1
-    fi
-
-    echo "==> Syncing files to $TARGET_DIR..."
-    # We use rsync to sync files while preserving 'gen/' and excluding '.git'
-    # If rsync is not available, we use nix-shell to run it
-    RSYNC_CMD="rsync -av --delete --exclude='.git' --exclude='gen/' '$TMP_DIR/' '$TARGET_DIR/'"
-    if command -v rsync >/dev/null 2>&1; then
-        eval "$RSYNC_CMD > /dev/null"
-    else
-        echo "==> rsync not found. Using nix-shell to run sync..."
-        nix shell nixpkgs#rsync -c bash -c "$RSYNC_CMD > /dev/null"
-    fi
-
-    rm -rf "$TMP_DIR"
-else
-    # For other directories (e.g. dev workspace), we keep the git repository
-    # Check for git repository
-    if [ ! -d ".git" ]; then
-        echo "==> Git repository not found. Initializing..."
-        git init -q
-        git remote add origin "$REPO_URL"
-        echo "==> Fetching latest changes from $REPO_URL..."
-        git fetch origin "$BRANCH" -q
-        echo "==> Syncing files with upstream..."
-        git reset --hard "origin/$BRANCH" -q
-    else
-        # Existing git repo - try to pull/rebase to be safe with local commits
-        echo "==> Existing git repository found. Pulling latest changes..."
-        
-        # Check for uncommitted changes
-        if ! git diff-index --quiet HEAD --; then
-            echo "!!! WARNING: You have uncommitted changes in $TARGET_DIR."
-            read -p "Stash changes and continue? [y/N]: " stash_confirm
-            if [[ "$stash_confirm" =~ ^[Yy]$ ]]; then
-                git stash -q
-                HAS_STASH=true
-            else
-                echo "Update cancelled."
-                exit 1
-            fi
-        fi
-
-        git fetch origin "$BRANCH" -q
-        if ! git pull --rebase origin "$BRANCH" -q; then
-            echo "!!! Error: Pull failed. You may have conflicts."
-            [ "$HAS_STASH" = true ] && git stash pop -q
-            exit 1
-        fi
-        
-        [ "$HAS_STASH" = true ] && git stash pop -q && echo "==> Restored your uncommitted changes."
-    fi
+# For /etc/cakeos, we must NEVER have a .git folder or Nix will ignore 'gen/'
+# Ensure any old .git is gone
+if [ -d ".git" ]; then
+    rm -rf .git
+    echo "==> Removed existing .git folder to keep 'gen/' visible."
 fi
+
+TMP_DIR=$(mktemp -d)
+echo "==> Cloning latest changes to temporary directory..."
+if ! git clone --depth 1 -q "$REPO_URL" "$TMP_DIR"; then
+    echo "!!! Error: Clone failed."
+    rm -rf "$TMP_DIR"
+    exit 1
+fi
+
+echo "==> Syncing files to $TARGET_DIR..."
+# We use rsync to sync files while preserving 'gen/' and excluding '.git'
+# If rsync is not available, we use nix-shell to run it
+RSYNC_CMD="rsync -av --delete --exclude='.git' --exclude='gen/' '$TMP_DIR/' '$TARGET_DIR/'"
+if command -v rsync >/dev/null 2>&1; then
+    eval "$RSYNC_CMD > /dev/null"
+else
+    echo "==> rsync not found. Using nix-shell to run sync..."
+    nix shell nixpkgs#rsync -c bash -c "$RSYNC_CMD > /dev/null"
+fi
+
+rm -rf "$TMP_DIR"
 
 echo "==> Done! Upstream changes have been applied."
 echo "==> Dynamic elements (like the 'gen/' folder) have been preserved."
 
 # Ask to rebuild
-if [[ "$TARGET_DIR" == "/etc/cakeos" ]]; then
-    read -p "Would you like to apply the changes now? (nixos-rebuild switch) [y/N]: " confirm
-    if [[ "$confirm" =~ ^[Yy]$ ]]; then
-        # Detect the current configuration name from gen/
-        CONFIG_NAME=$(ls gen/*.nix 2>/dev/null | grep -v "hardware" | head -n 1 | xargs basename -s .nix)
-        
-        if [ -z "$CONFIG_NAME" ]; then
-            echo "Could not automatically detect configuration name. Please run nixos-rebuild manually."
-            exit 0
-        fi
+read -p "Would you like to apply the changes now? (nixos-rebuild switch) [y/N]: " confirm
+if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    # Detect the current configuration name from gen/
+    CONFIG_NAME=$(ls gen/*.nix 2>/dev/null | grep -v "hardware" | head -n 1 | xargs basename -s .nix)
+    
+    if [ -z "$CONFIG_NAME" ]; then
+        echo "Could not automatically detect configuration name. Please run nixos-rebuild manually."
+        exit 0
+    fi
 
-        echo "==> Rebuilding system for configuration: $CONFIG_NAME..."
-        nixos-rebuild boot --flake ".#$CONFIG_NAME"
+    echo "==> Rebuilding system for configuration: $CONFIG_NAME..."
+    nixos-rebuild boot --flake ".#$CONFIG_NAME"
 
-        if [ $? -eq 0 ]; then
-            echo "==> Rebuild completed successfully."
-            echo "==> Would you like to reboot now? (Y/n): "
-            read -r reboot_confirm
-            [[ -z "$reboot_confirm" ]] && reboot_confirm="Y"
-            if [[ "$reboot_confirm" =~ ^[Yy]$ ]]; then
-                echo "==> Rebooting..."
-                sudo reboot
-            fi
-        else
-            echo "==> Rebuild failed. Please check the logs."
+    if [ $? -eq 0 ]; then
+        echo "==> Rebuild completed successfully."
+        echo "==> Would you like to reboot now? (Y/n): "
+        read -r reboot_confirm
+        [[ -z "$reboot_confirm" ]] && reboot_confirm="Y"
+        if [[ "$reboot_confirm" =~ ^[Yy]$ ]]; then
+            echo "==> Rebooting..."
+            sudo reboot
         fi
+    else
+        echo "==> Rebuild failed. Please check the logs."
     fi
 fi
