@@ -30,6 +30,7 @@
     docker-compose
     inputs.nvf.packages.${pkgs.stdenv.hostPlatform.system}.default
     kdePackages.kdialog
+    zenity
   ];
 
   programs = {
