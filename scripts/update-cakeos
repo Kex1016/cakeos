@@ -58,7 +58,7 @@ echo "==> Done! Upstream changes have been applied."
 echo "==> Dynamic elements (like the 'gen/' folder) have been preserved."
 
 # Ask to rebuild
-read -p "Would you like to apply the changes now? (nixos-rebuild switch) [y/N]: " confirm
+read -p "Would you like to apply the changes now? (nixos-rebuild boot) [y/N]: " confirm
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
     # Detect the current configuration name from gen/
     CONFIG_NAME=$(ls gen/*.nix 2>/dev/null | grep -v "hardware" | head -n 1 | xargs basename -s .nix)
