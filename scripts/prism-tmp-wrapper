@@ -45,6 +45,8 @@ cleanup() {
             rsync -a --delete "${EXCLUDES[@]}" "$TEMP_DIR/" "$ORIG_BAK/"
             
             echo "# Restoring original directory structure..."
+            # Point symlink back to backup before final move to ensure path is always valid
+            ln -sfT "$ORIG_BAK" "$INST_DIR"
             rm -f "$INST_DIR"
             mv "$ORIG_BAK" "$INST_DIR"
             
@@ -53,6 +55,7 @@ cleanup() {
         ) | zenity --progress --title="Prism Wrapper" --text="Finalizing instance and syncing back..." --pulsate --auto-close --no-cancel 2>/dev/null || {
             # Fallback if zenity is not available or fails
             rsync -a --delete "${EXCLUDES[@]}" "$TEMP_DIR/" "$ORIG_BAK/"
+            ln -sfT "$ORIG_BAK" "$INST_DIR"
             rm -f "$INST_DIR"
             mv "$ORIG_BAK" "$INST_DIR"
             rm -rf "$TEMP_DIR"
@@ -71,17 +74,25 @@ fi
 
 mkdir -p "$TEMP_BASE"
 
+# 1. Remove stale backup if it exists (from a previous crash)
+rm -rf "$ORIG_BAK"
+
+# 2. Move original to backup and create a temporary symlink immediately
+# to avoid disappearing from Prism Launcher's view.
+mv "$INST_DIR" "$ORIG_BAK"
+ln -s "$ORIG_BAK" "$INST_DIR"
+
+# 3. Sync to temporary directory
 (
     echo "# Copying instance to $TEMP_DIR..."
-    rsync -a "${EXCLUDES[@]}" "$INST_DIR/" "$TEMP_DIR/"
+    rsync -a "${EXCLUDES[@]}" "$ORIG_BAK/" "$TEMP_DIR/"
 ) | zenity --progress --title="Prism Wrapper" --text="Preparing instance in RAM..." --pulsate --auto-close --no-cancel 2>/dev/null || {
     # Fallback
-    rsync -a "${EXCLUDES[@]}" "$INST_DIR/" "$TEMP_DIR/"
+    rsync -a "${EXCLUDES[@]}" "$ORIG_BAK/" "$TEMP_DIR/"
 }
 
-# Swap directories
-mv "$INST_DIR" "$ORIG_BAK"
-ln -s "$TEMP_DIR" "$INST_DIR"
+# 4. Point the symlink to the RAM disk version
+ln -sfT "$TEMP_DIR" "$INST_DIR"
 
 # --- Launch Phase ---
 "$@"
