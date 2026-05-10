@@ -82,6 +82,7 @@
         inputs.disko.nixosModules.disko
         inputs.home-manager.nixosModules.home-manager
         (inputs.spicetify-nix.nixosModules.spicetify)
+        ./system.nix
         {
           home-manager = {
             extraSpecialArgs = specialArgs;
