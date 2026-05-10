@@ -12,15 +12,27 @@ REPO_URL="git@github.com:Kex1016/cakeos.git"
 
 BRANCH="main"
 
-# Identify the repository root (parent of the scripts directory)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Identify the repository root
+# 1. Check if a directory was passed as an argument
+# 2. Check if the script's real location is inside a cakeos repo
+# 3. Default to /etc/cakeos
+REAL_SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+REAL_SCRIPT_DIR="$(dirname "$REAL_SCRIPT_PATH")"
+
+if [ -n "$1" ] && [ -d "$1" ]; then
+    TARGET_DIR="$(cd "$1" && pwd)"
+    shift # Remove the directory from arguments
+elif [[ -f "$REAL_SCRIPT_DIR/../flake.nix" ]]; then
+    TARGET_DIR="$(cd "$REAL_SCRIPT_DIR/.." && pwd)"
+else
+    TARGET_DIR="/etc/cakeos"
+fi
 
 # Ensure we are running as root if updating /etc/cakeos
 if [[ "$TARGET_DIR" == "/etc/cakeos" ]] && [ "$EUID" -ne 0 ]; then
-    echo "==> This script needs root privileges to update /etc/cakeos."
+    echo "==> This script needs root privileges to update $TARGET_DIR."
     echo "==> Requesting sudo..."
-    exec sudo "$0" "$@"
+    exec sudo "$0" "$TARGET_DIR" "$@"
 fi
 
 cd "$TARGET_DIR"
