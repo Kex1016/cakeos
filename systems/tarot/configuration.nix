@@ -6,7 +6,6 @@
     ../../gen/tarot.nix
     ../../modules/system/plasma/boot.nix
     ../../modules/system/plasma/fonts.nix
-    ../../modules/system/plasma/updater.nix
     ../../modules/system/plasma/wm.nix
     ../../modules/system/plasma/styles.nix
   ];
