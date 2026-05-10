@@ -29,6 +29,7 @@
     gpu-screen-recorder
     docker-compose
     inputs.nvf.packages.${pkgs.stdenv.hostPlatform.system}.default
+    kdePackages.kdialog
   ];
 
   programs = {
