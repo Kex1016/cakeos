@@ -39,40 +39,70 @@ cd "$TARGET_DIR"
 
 echo "==> Updating CakeOS configuration in $TARGET_DIR..."
 
-# Check for git repository
-if [ ! -d ".git" ]; then
-    echo "==> Git repository not found. Initializing..."
-    git init -q
-    git remote add origin "$REPO_URL"
-    echo "==> Fetching latest changes from $REPO_URL..."
-    git fetch origin "$BRANCH" -q
-    echo "==> Syncing files with upstream..."
-    git reset --hard "origin/$BRANCH" -q
-else
-    # Existing git repo - try to pull/rebase to be safe with local commits
-    echo "==> Existing git repository found. Pulling latest changes..."
+if [[ "$TARGET_DIR" == "/etc/cakeos" ]]; then
+    # For /etc/cakeos, we must NEVER have a .git folder or Nix will ignore 'gen/'
+    echo "==> Target is /etc/cakeos. Using clean sync method..."
     
-    # Check for uncommitted changes
-    if ! git diff-index --quiet HEAD --; then
-        echo "!!! WARNING: You have uncommitted changes in $TARGET_DIR."
-        read -p "Stash changes and continue? [y/N]: " stash_confirm
-        if [[ "$stash_confirm" =~ ^[Yy]$ ]]; then
-            git stash -q
-            HAS_STASH=true
-        else
-            echo "Update cancelled."
-            exit 1
-        fi
-    fi
+    # Ensure any old .git is gone
+    [ -d ".git" ] && rm -rf .git && echo "==> Removed existing .git folder to keep 'gen/' visible."
 
-    git fetch origin "$BRANCH" -q
-    if ! git pull --rebase origin "$BRANCH" -q; then
-        echo "!!! Error: Pull failed. You may have conflicts."
-        [ "$HAS_STASH" = true ] && git stash pop -q
+    TMP_DIR=$(mktemp -d)
+    echo "==> Cloning latest changes to temporary directory..."
+    if ! git clone --depth 1 -q "$REPO_URL" "$TMP_DIR"; then
+        echo "!!! Error: Clone failed."
+        rm -rf "$TMP_DIR"
         exit 1
     fi
-    
-    [ "$HAS_STASH" = true ] && git stash pop -q && echo "==> Restored your uncommitted changes."
+
+    echo "==> Syncing files to $TARGET_DIR..."
+    # We use rsync to sync files while preserving 'gen/' and excluding '.git'
+    # If rsync is not available, we use nix-shell to run it
+    RSYNC_CMD="rsync -av --delete --exclude='.git' --exclude='gen/' '$TMP_DIR/' '$TARGET_DIR/'"
+    if command -v rsync >/dev/null 2>&1; then
+        eval "$RSYNC_CMD > /dev/null"
+    else
+        echo "==> rsync not found. Using nix-shell to run sync..."
+        nix shell nixpkgs#rsync -c bash -c "$RSYNC_CMD > /dev/null"
+    fi
+
+    rm -rf "$TMP_DIR"
+else
+    # For other directories (e.g. dev workspace), we keep the git repository
+    # Check for git repository
+    if [ ! -d ".git" ]; then
+        echo "==> Git repository not found. Initializing..."
+        git init -q
+        git remote add origin "$REPO_URL"
+        echo "==> Fetching latest changes from $REPO_URL..."
+        git fetch origin "$BRANCH" -q
+        echo "==> Syncing files with upstream..."
+        git reset --hard "origin/$BRANCH" -q
+    else
+        # Existing git repo - try to pull/rebase to be safe with local commits
+        echo "==> Existing git repository found. Pulling latest changes..."
+        
+        # Check for uncommitted changes
+        if ! git diff-index --quiet HEAD --; then
+            echo "!!! WARNING: You have uncommitted changes in $TARGET_DIR."
+            read -p "Stash changes and continue? [y/N]: " stash_confirm
+            if [[ "$stash_confirm" =~ ^[Yy]$ ]]; then
+                git stash -q
+                HAS_STASH=true
+            else
+                echo "Update cancelled."
+                exit 1
+            fi
+        fi
+
+        git fetch origin "$BRANCH" -q
+        if ! git pull --rebase origin "$BRANCH" -q; then
+            echo "!!! Error: Pull failed. You may have conflicts."
+            [ "$HAS_STASH" = true ] && git stash pop -q
+            exit 1
+        fi
+        
+        [ "$HAS_STASH" = true ] && git stash pop -q && echo "==> Restored your uncommitted changes."
+    fi
 fi
 
 echo "==> Done! Upstream changes have been applied."
