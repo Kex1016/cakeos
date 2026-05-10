@@ -5,7 +5,11 @@
 set -e
 
 # Configuration
-REPO_URL="https://github.com/Kex1016/cakeos.git"
+# Ssh method
+REPO_URL="git@github.com:Kex1016/cakeos.git"
+# Https method
+# REPO_URL="https://github.com/Kex1016/cakeos.git"
+
 BRANCH="main"
 
 # Identify the repository root (parent of the scripts directory)
