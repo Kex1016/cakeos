@@ -43,7 +43,7 @@
       url = "github:4v3ngR/kwin-effects-glass";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    millennium.url = "github:SteamClientHomebrew/Millennium?dir=packages/nix";
+    millennium.url = "github:SteamClientHomebrew/Millennium/next?dir=packages/nix";
     glass.url = "github:4v3ngR/Glass";
   };
 
