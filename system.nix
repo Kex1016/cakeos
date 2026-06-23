@@ -18,6 +18,7 @@
   boot.loader.limine.enable = true;
   boot.loader.limine.maxGenerations = 5;
   boot.loader.efi.canTouchEfiVariables = true;
+  boot.blacklistedKernelModules = [ "wacom" ]; # on my terms, bitch
 
   networking.networkmanager.enable = true;
   networking.firewall = {
