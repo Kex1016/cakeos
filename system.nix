@@ -20,6 +20,8 @@
   boot.loader.efi.canTouchEfiVariables = true;
   boot.blacklistedKernelModules = [ "wacom" ]; # on my terms, bitch
 
+  security.pki.extraCertificates = ./home_root.crt;
+
   networking.networkmanager.enable = true;
   networking.firewall = {
     trustedInterfaces = [ "virbr0" ];
