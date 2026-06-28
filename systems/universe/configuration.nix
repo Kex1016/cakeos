@@ -14,6 +14,7 @@
     ../../modules/system/apps/tablet.nix
     ../../modules/system/plasma/styles.nix
     ../../modules/system/core/locale.nix
+    ../../modules/system/core/volume-fix.nix
     #../../modules/system/apps/mongo.nix
   ];
 
