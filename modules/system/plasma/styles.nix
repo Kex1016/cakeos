@@ -2,8 +2,8 @@
 {
   environment.systemPackages = [
     pkgs.kdePackages.qtstyleplugin-kvantum
-    kdePackages.oxygen
-    kdePackages.oxygen-icons
-    kdePackages.oxygen-sounds
+    pkgs.kdePackages.oxygen
+    pkgs.kdePackages.oxygen-icons
+    pkgs.kdePackages.oxygen-sounds
   ];
 }
