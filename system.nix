@@ -15,12 +15,6 @@
     ];
   };
 
-  # FIXME: TEMPORARY.
-  nixpkgs.config.permittedInsecurePackages = [
-    "pnpm-10.29.2"
-  ];
-  # FIXME: TEMPORARY.
-
   boot.loader.limine.enable = true;
   boot.loader.limine.maxGenerations = 5;
   boot.loader.efi.canTouchEfiVariables = true;

@@ -66,6 +66,11 @@
           inputs.nix-cachyos-kernel.overlays.pinned
           inputs.millennium.overlays.default
         ];
+        # FIXME: TEMPORARY.
+        config.permittedInsecurePackages = [
+          "pnpm-10.29.2"
+        ];
+        # FIXME: TEMPORARY.
       };
 
       specialArgs = {
