@@ -11,6 +11,7 @@
     ../../modules/system/apps/steam.nix
     ../../modules/system/apps/ntsync.nix
     ../../modules/system/apps/vpn.nix
+    ../../modules/system/apps/librepods.nix
     ../../modules/system/apps/tablet.nix
     ../../modules/system/plasma/styles.nix
     ../../modules/system/core/locale.nix

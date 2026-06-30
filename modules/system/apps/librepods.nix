@@ -1,0 +1,3 @@
+{ ... }: {
+  programs.librepods.enable = true;
+}
