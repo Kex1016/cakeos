@@ -39,12 +39,7 @@
     };
     nix-flatpak.url = "github:gmodena/nix-flatpak";
     spicetify-nix.url = "github:Gerg-L/spicetify-nix";
-    kwin-effects-glass = {
-      url = "github:4v3ngR/kwin-effects-glass";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     millennium.url = "github:SteamClientHomebrew/Millennium/next?dir=packages/nix";
-    glass.url = "github:4v3ngR/Glass";
   };
 
   outputs =
