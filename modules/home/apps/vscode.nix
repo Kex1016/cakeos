@@ -1,7 +1,12 @@
 { pkgs, ... }:
 
 {
-  home.packages = [ pkgs.biome ];
+  home.packages = with pkgs; [
+    biome
+    claude-code
+    claude-monitor
+    claude-mergetool
+  ];
 
   programs.vscodium = {
     enable = true;
@@ -36,24 +41,33 @@
       sumneko.lua
       humao.rest-client
     ];
-    # profiles.default.userSettings = {
-    #   "editor.fontFamily" = "'RobotoMono Nerd Font Mono', 'Droid Sans Mono', 'monospace', monospace";
-    #   "editor.fontLigatures" = true;
-    #   "nix.enableLanguageServer" = true;
-    #   "nix.serverPath" = "nil";
-    #   "nix.serverSettings" = {
-    #     "nil" = {
-    #       "formatting" = {
-    #         "command" = [ "nixfmt" ];
-    #       };
-    #     };
-    #   };
-    #   "[javascript][typescript][json][typescriptreact][css][html]" = {
-    #     "editor.defaultFormatter" = "biomejs.biome";
-    #   };
-    #   "git.autofetch" = true;
-    #   "diffEditor.ignoreTrimWhitespace" = false;
-    # };
-
+    profiles.default.userSettings = {
+      "editor.fontFamily" = "'RobotoMono Nerd Font Mono', 'Droid Sans Mono', 'monospace', monospace";
+      "editor.fontLigatures" = true;
+      "nix.enableLanguageServer" = true;
+      "nix.serverPath" = "nil";
+      "nix.serverSettings" = {
+        "nil" = {
+          "formatting" = {
+            "command" = [ "nixfmt" ];
+          };
+        };
+      };
+      "[javascript][typescript][json][typescriptreact][css][html]" = {
+        "editor.defaultFormatter" = "biomejs.biome";
+      };
+      "git.autofetch" = true;
+      "diffEditor.ignoreTrimWhitespace" = false;
+      "json.schemaDownload.trustedDomains" = {
+        "https://schemastore.azurewebsites.net/" = true;
+        "https://raw.githubusercontent.com/microsoft/vscode/" = true;
+        "https://raw.githubusercontent.com/devcontainers/spec/" = true;
+        "https://www.schemastore.org/" = true;
+        "https://json.schemastore.org/" = true;
+        "https://json-schema.org/" = true;
+        "https://developer.microsoft.com/json-schemas/" = true;
+        "https://biomejs.dev" = true;
+      };
+    };
   };
 }
