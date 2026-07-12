@@ -17,6 +17,26 @@
       notifyAboutUpdates = false;
       useQuickCss = true;
       disableMinSize = true;
+      extraQuickCss = ''
+        @import url('https://raw.githubusercontent.com/Krammeth/css-snippets/refs/heads/main/CompactTabs.css');
+        @import url("https://raw.githubusercontent.com/foxf4ce/discord-css/refs/heads/main/irc.css");
+        :root {
+          --font-code: "Roboto Mono", monospace; /* Optional custom font */
+
+          /* Custom indentation, values represent number of blank spaces from the left */
+          --irc-indent: 3;
+          --irc-newline-indent: 8;
+          --irc-reply-indent: 8;
+          --irc-reply-spine-length: 3;
+          
+          --server-tabs: true;
+          --dms-tabs: true;
+        }
+
+        .copyOnlyText__10651 {
+          display: none !important;
+        }
+      '';
       plugins = {
         FakeNitro = {
           enabled = true;
@@ -111,6 +131,10 @@
         ValidReply.enabled = true;
         ValidUser.enabled = true;
         YoutubeAdblock.enabled = true;
+        IrcColors = {
+          enabled = true;
+          lightness = 70;
+        };
       };
     };
     # vencord.themes = [ ];
