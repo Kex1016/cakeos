@@ -40,6 +40,7 @@
     nix-flatpak.url = "github:gmodena/nix-flatpak";
     spicetify-nix.url = "github:Gerg-L/spicetify-nix";
     millennium.url = "github:SteamClientHomebrew/Millennium/next?dir=packages/nix";
+    affinity-nix.url = "github:mrshmllow/affinity-nix";
   };
 
   outputs =
@@ -60,12 +61,8 @@
           inputs.nur.overlays.default
           inputs.nix-cachyos-kernel.overlays.pinned
           inputs.millennium.overlays.default
+          inputs.affinity-nix.overlays.default
         ];
-        # FIXME: TEMPORARY.
-        # config.permittedInsecurePackages = [
-        #   "pnpm-10.29.2"
-        # ];
-        # FIXME: TEMPORARY.
       };
 
       specialArgs = {

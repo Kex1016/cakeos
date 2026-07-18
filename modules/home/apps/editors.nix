@@ -13,6 +13,7 @@
     nodejs
 
     antigravity-fhs
+    affinity-v3
     inputs.nvf.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 }
