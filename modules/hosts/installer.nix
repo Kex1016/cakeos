@@ -21,7 +21,7 @@
       "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-base.nix"
       inputs.disko.nixosModules.disko
       config.flake.modules.nixos.installer
-      ../../systems/installer/configuration.nix
+      ../../installer/configuration.nix
     ];
   };
 }

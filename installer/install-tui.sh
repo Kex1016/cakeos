@@ -188,7 +188,7 @@ confirm "Confirm Installation" "$SUMMARY" || { clear; exit 0; }
 # Installation
 clear
 log "Starting partitioning"
-(disko --mode disko "$FLAKE_URL/systems/installer/disko-config.nix" --argstr disk "$SELECTED_DISK" --argstr swapSize "$SWAP_SIZE" 2>&1) \
+(disko --mode disko "$FLAKE_URL/installer/disko-config.nix" --argstr disk "$SELECTED_DISK" --argstr swapSize "$SWAP_SIZE" 2>&1) \
     | tee -a "$LOG_FILE" \
     | dialog --backtitle "$BACKTITLE" --title "Partitioning with Disko" --programbox 18 75
 
@@ -230,7 +230,7 @@ fi)
 }
 EOF
 
-cat > "/mnt/etc/cakeos/systems/installer/disko-params.nix" <<EOF
+cat > "/mnt/etc/cakeos/installer/disko-params.nix" <<EOF
 { disk = "$SELECTED_DISK"; swapSize = "$SWAP_SIZE"; }
 EOF
 
