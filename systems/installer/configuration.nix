@@ -1,12 +1,4 @@
-{
-  pkgs,
-  lib,
-  inputs,
-  ...
-}:
-let
-  flakeSrc = inputs.self;
-in
+{ pkgs, lib, ... }:
 
 {
   networking.hostName = "cakeos-installer";
@@ -14,8 +6,8 @@ in
   time.timeZone = "UTC";
   i18n.defaultLocale = "en_US.UTF-8";
 
-  # Embed the entire CakeOS flake into the ISO at a static path
-  environment.etc."cakeos".source = flakeSrc;
+  # environment.etc."cakeos".source is set in modules/hosts/installer.nix,
+  # which has access to `self`.
   # Copy the TUI script and disko config into the ISO
   environment.etc."cake-install.sh" = {
     source = ./install-tui.sh;

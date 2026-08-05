@@ -1,13 +1,24 @@
-{ config, inputs, legacy, ... }:
+{ config, inputs, ... }:
+let
+  flake = config;
+in
 {
   # tarot's module set is a strict subset of universe's: `base` only, no
   # `workstation`.
   flake.nixosConfigurations.tarot = inputs.nixpkgs.lib.nixosSystem {
-    inherit (legacy) specialArgs;
     modules = [
-      config.flake.modules.nixos.base
+      flake.modules.nixos.base
       ../../systems/tarot/configuration.nix
-      { home-manager.users.cakeos = import ../../systems/tarot/home.nix; }
+      {
+        # NOTE: install-tui.sh lets the operator choose any username for
+        # non-universe configs (it merely defaults to "cakeos"), while this
+        # attribute is fixed. A tarot install under a different username gets
+        # no home-manager configuration at all. Pre-existing; the fix belongs
+        # in install-tui.sh, not here -- deriving the user set from
+        # config.users.users is infinite recursion, because home-manager's
+        # NixOS module defines users.users from it.
+        home-manager.users.cakeos.imports = [ flake.modules.homeManager.base ];
+      }
     ];
   };
 }

@@ -33,4 +33,18 @@
         ];
       };
     };
+
+  flake.modules.homeManager.workstation =
+    { pkgs, ... }:
+    {
+      home.packages = with pkgs; [
+        prismlauncher
+        r2modman
+        osu-lazer-bin
+        xivlauncher
+        protonplus
+        etterna
+        ocelot-desktop
+      ];
+    };
 }
