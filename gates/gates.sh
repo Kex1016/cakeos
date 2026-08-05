@@ -84,7 +84,7 @@ fi
 # so its derivation hash depends on every byte of the repo and moves whenever
 # any file is renamed -- which this migration does constantly. Comparing a
 # fingerprint of the options that actually matter is the meaningful check.
-# Phase 2 deliberately drops the four overlays from the ISO, but that must not
+# Phase 3 deliberately drops the four overlays from the ISO, but that must not
 # change any of these values either, so the gate stays open-ended.
 if applies 1 -; then
     if out=$( cd "$TREE" && ev --json "$INSTALLER_FP_ATTR" --apply "$INSTALLER_FP_APPLY" ); then
@@ -105,10 +105,12 @@ if applies 1 -; then
 fi
 
 # --- G03/G04: universe+tarot unchanged through the NixOS-side rework. ------
-# Phase 3 moves home-manager, which legitimately changes these (nvf dedup),
-# so the comparison stops at Phase 2.
+# Must hold through phase 3, which rewires how pkgs is built -- that is the
+# single most likely step to move a derivation hash, so it gets its own phase
+# and its own column. Phase 4 moves home-manager, which legitimately changes
+# these (the nvf duplicate collapses), so the comparison stops at phase 3.
 for host in universe tarot; do
-    if applies 1 2; then
+    if applies 1 3; then
         if d=$(mkcopy "$host"); then
             if out=$(drv "$d" "nixosConfigurations.$host.config.system.build.vm.drvPath"); then
                 echo "$out" > "$WORK/$host.drv"
@@ -148,7 +150,7 @@ for host in universe tarot; do
 done
 
 # --- G06: home dirs derive correctly once username/homeDirectory are dropped.
-if applies 3 -; then
+if applies 4 -; then
     for host in universe tarot; do
         user=$([[ $host == universe ]] && echo majo || echo cakeos)
         want="/home/$user"
@@ -165,7 +167,7 @@ if applies 3 -; then
 fi
 
 # --- G07: THE big one. Clean clone, no gen/, all three hosts eval-checked. -
-if applies 4 -; then
+if applies 5 -; then
     if d=$(mkcopy none); then
         if ( cd "$d" && nix flake check --no-build --no-warn-dirty ) >"$WORK/fc" 2>&1; then
             emit flake-check-no-gen PASS "all configurations evaluate without gen/"
@@ -178,7 +180,7 @@ if applies 4 -; then
 fi
 
 # --- G08: the gen/ fallback must DISENGAGE when gen/ is really present. ----
-if applies 4 -; then
+if applies 5 -; then
     for host in universe tarot; do
         if d=$(mkcopy "$host"); then
             tags=$( cd "$d" && ev --json ".#nixosConfigurations.$host.config.system.nixos.tags" )
@@ -285,7 +287,7 @@ if applies 2 -; then
 fi
 
 # --- G15: appimage binfmt comes from nixpkgs, not the hand-rolled block. --
-if applies 2 -; then
+if applies 7 -; then
     if d=$(mkcopy tarot); then
         got=$( cd "$d" && ev --json \
             '.#nixosConfigurations.tarot.config.boot.binfmt.registrations' \
@@ -301,7 +303,7 @@ if applies 2 -; then
 fi
 
 # --- G16: relative-path landmines (../../scripts, ../../home_root.crt). --
-if applies 3 -; then
+if applies 4 -; then
     if d=$(mkcopy universe); then
         got=$( cd "$d" && ev --raw \
             '.#nixosConfigurations.universe.config.home-manager.users.majo.home.file.".local/bin".source' )
@@ -328,8 +330,8 @@ if applies 2 -; then
     fi
 fi
 
-# --- G17: specialArgs pass-thru is gone. Phase 6 target. -----------------
-if applies 6 -; then
+# --- G17: specialArgs pass-thru is gone. Phase 7 target. -----------------
+if applies 7 -; then
     if grep -rn 'extraSpecialArgs\|specialArgs' "$TREE/modules" >/dev/null 2>&1; then
         emit no-specialargs FAIL "$(grep -rn 'extraSpecialArgs\|specialArgs' "$TREE/modules" | head -2)"
     else
@@ -337,8 +339,8 @@ if applies 6 -; then
     fi
 fi
 
-# --- G18: dead files actually deleted. Phase 5 target. ------------------
-if applies 5 -; then
+# --- G18: dead files actually deleted. Phase 6 target. ------------------
+if applies 6 -; then
     dead=()
     for f in system.nix systems modules/system modules/home \
              systems/installer/user-settings.nix; do

@@ -5,7 +5,7 @@
 #   ./gates/run-matrix.sh              # all phases
 #   ./gates/run-matrix.sh 3            # phase 3 only
 #
-# Phases are identified by the tags phase0..phase6 on this branch. Each phase is
+# Phases are identified by the tags phase0..phase7 on this branch. Each phase is
 # checked out into its own git worktree, so your working tree is never touched
 # and nothing needs stashing.
 #
@@ -86,7 +86,7 @@ fi
 # ---------------------------------------------------------------------------
 # Run every phase
 # ---------------------------------------------------------------------------
-for n in 0 1 2 3 4 5 6; do
+for n in 0 1 2 3 4 5 6 7; do
     [[ -n $ONLY && $ONLY != "$n" ]] && continue
     tag="phase$n"
     git rev-parse -q --verify "refs/tags/$tag" >/dev/null || {
