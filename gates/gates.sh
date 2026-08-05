@@ -342,8 +342,8 @@ fi
 # --- G18: dead files actually deleted. Phase 6 target. ------------------
 if applies 6 -; then
     dead=()
-    for f in system.nix systems modules/system modules/home \
-             systems/installer/user-settings.nix; do
+    for f in system.nix systems modules/_system modules/_home \
+             modules/system modules/home; do
         [[ -e "$TREE/$f" ]] && dead+=("$f")
     done
     if ((${#dead[@]} == 0)); then

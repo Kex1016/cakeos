@@ -1,8 +1,10 @@
-{ inputs, legacy, ... }:
+{ config, inputs, legacy, ... }:
 {
   flake.nixosConfigurations.universe = inputs.nixpkgs.lib.nixosSystem {
     inherit (legacy) system pkgs specialArgs;
-    modules = legacy.commonSystemModules ++ [
+    modules = [
+      config.flake.modules.nixos.base
+      config.flake.modules.nixos.workstation
       ../../systems/universe/configuration.nix
       { home-manager.users.majo = import ../../systems/universe/home.nix; }
     ];
