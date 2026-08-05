@@ -1,10 +1,5 @@
 # Gaming was spread across three files plus a fenced-off block of firewall
-# ports in system.nix. The NixOS half is unified here; the game launchers join
-# it once the home modules become dendritic.
-#
-# The firewall ports are deliberately NOT moved here yet: they currently apply
-# to tarot as well, and relocating them to `workstation` would change tarot's
-# configuration. That move happens in the cleanup phase.
+# ports in system.nix. One feature, one file.
 {
   flake.modules.nixos.workstation =
     { pkgs, ... }:
@@ -30,6 +25,37 @@
         extraCompatPackages = with pkgs; [
           proton-ge-bin
           dwproton-bin
+        ];
+      };
+
+      # Moved out of system.nix's `# START games` / `# END games` blocks. These
+      # applied to tarot as well, which has no Steam; scoping them to
+      # workstation is a deliberate behaviour change.
+      #
+      # allowed*Ports are listOf port and merge by concatenation, so these
+      # compose with base's list rather than conflicting with it.
+      networking.firewall = {
+        allowedTCPPorts = [
+          5900
+          27960
+          27015
+          7777
+        ];
+        allowedUDPPorts = [
+          27960
+          27900
+          27015
+          27036
+        ];
+        allowedUDPPortRanges = [
+          {
+            from = 7777;
+            to = 7779;
+          }
+          {
+            from = 27031;
+            to = 27036;
+          }
         ];
       };
     };

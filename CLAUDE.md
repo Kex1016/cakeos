@@ -9,14 +9,19 @@ NixOS system profiles built from shared modules, plus a custom TUI installer tha
 ISO. There is no app to build/lint/test in the traditional sense — "correctness" here means "does
 the flake evaluate and build."
 
+It follows the [dendritic pattern](https://github.com/mightyiam/dendritic): **every `.nix` file
+except `flake.nix` is a flake-parts module**, auto-imported, implementing one feature across every
+configuration class it touches.
+
 ## Commands
 
 ```bash
-# Check the flake evaluates (fast sanity check, catches syntax/eval errors)
+# Check every configuration evaluates. Thanks to the gen/ fallback (see below) this
+# now covers universe and tarot too, not just installer.
 nix flake check
 
 # Build a specific host's system closure without switching to it
-nix build .#nixosConfigurations.<name>.config.system.build.toplevel   # e.g. universe, tarot
+nix build .#nixosConfigurations.<name>.config.system.build.toplevel   # universe, tarot, installer
 
 # Build and boot-test the installer ISO in a throwaway QEMU VM
 ./build-installer.sh          # just builds
@@ -29,97 +34,175 @@ nix build .#nixosConfigurations.<name>.config.system.build.toplevel   # e.g. uni
 ./build-vm.sh universe
 ./build-vm.sh tarot
 
-# Format nix files (repo uses nixfmt-style formatting; check before assuming a formatter is wired in)
+# Format nix files
 nixfmt <file>.nix
 ```
 
-There are no unit tests. Validating a change means making sure the relevant
-`nixosConfigurations.<name>` still evaluates/builds, and — for anything touching the installer TUI
-or disko layout — booting it in a VM via `build-vm.sh` / `build-installer.sh`.
+There are no unit tests. Validating a change means `nix flake check`, plus — for anything touching
+the installer TUI or disko layout — booting it in a VM via `build-vm.sh` / `build-installer.sh`.
+
+### Verification gate harness
+
+`gates/` runs the full verification suite against every phase of the dendritic migration and prints
+a phase × gate matrix, so a regression can be traced to the phase that introduced it:
+
+```bash
+./gates/run-matrix.sh        # all phases
+./gates/run-matrix.sh 3      # one phase
+```
+
+Phases are the `phase0`..`phase7` tags. Each is checked out into its own git worktree; the gate
+script always comes from the current checkout so one definition of "correct" applies to every
+column. Requires `nix` on PATH.
 
 ## Architecture
 
+### The dendritic pattern, concretely
+
+`flake.nix` is an entry point and nothing else. It does two non-obvious things:
+
+- imports `inputs.flake-parts.flakeModules.modules`, which declares
+  `flake.modules.<class>.<name>` as `lazyAttrsOf (lazyAttrsOf deferredModule)`. **This is not in
+  flake-parts core.** Without it, `flake.modules` falls through to the freeform `flake` type, which
+  is `types.unique` and accepts exactly one definition — so the *second* file to write
+  `flake.modules` fails with an error that reads like an undeclared-option typo.
+- roots `inputs.import-tree` at `./modules`, which recursively imports every `*.nix` whose path
+  contains no `/_` component.
+
+Because `deferredModule` merges by collecting definitions into `imports`, any number of files can
+write to the same aggregate name and they compose.
+
+A typical file — one feature, both classes:
+
+```nix
+# modules/desktop/styles.nix
+{
+  flake.modules.nixos.base = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.kdePackages.qtstyleplugin-kvantum /* ... */ ];
+  };
+
+  flake.modules.homeManager.base = { pkgs, ... }: {
+    qt.style.package = with pkgs; [ qt6ct qt5ct ];
+  };
+}
+```
+
+`inputs` reaches a module by **lexical closure over the outer flake-parts lambda** — there is no
+`specialArgs` or `extraSpecialArgs` anywhere:
+
+```nix
+{ inputs, ... }:
+{
+  flake.modules.homeManager.base = { pkgs, ... }: {
+    imports = [ inputs.spicetify-nix.homeManagerModules.default ];
+  };
+}
+```
+
+**`config` shadowing trap:** a file reading `config.flake.modules.*` must not name its *inner*
+module argument `config`. Bind `let flake = config;` in the outer lambda — `modules/hosts/*.nix` do
+this.
+
+### The three aggregates
+
+| name | applies to | holds |
+|---|---|---|
+| `base` | universe + tarot | everything shared: boot, networking, locale, audio, desktop, the whole home-manager profile |
+| `workstation` | universe only | gaming/steam, tablet, librepods, VPN, ntsync, volume-fix, the heavier apps |
+| `installer` | ISO only | the flake self-embed and nixpkgs platform settings |
+
+tarot's module set is a strict subset of universe's, which is why two aggregates cover both hosts.
+Adding a feature means one new file writing to the right aggregate — no host file changes.
+
+**Installer isolation is structural.** Nothing writes `base` or `workstation` into the `installer`
+aggregate, and `modules/hosts/installer.nix` never imports them. There is no `mkForce` or
+`disabledModules` defending it. `modules/optional/{ananicy,mongo}.nix` work the same way: they
+declare their own names that no aggregate references, so they stay inert while remaining visible to
+`nix flake show` — the dendritic replacement for commented-out import lines.
+
+### Layout
+
+```
+flake.nix              entry point only
+installer/             NOT a module dir — outside modules/, so never auto-imported
+  disko-config.nix       `{ disk, swapSize, ... }` function fed to the disko CLI via --argstr
+  disko-params.nix       write-only stub, overwritten by install-tui.sh
+  install-tui.sh         the TUI, baked into the ISO
+  configuration.nix      ISO-specific NixOS config
+gen/                   gitignored, written by the installer (see below)
+gen-presets/           stand-ins for gen/, used only by build-vm.sh
+gates/                 the phase × gate verification harness
+scripts/               symlinked into ~/.local/bin by modules/apps/essentials.nix
+modules/               <== import-tree root
+  flake/parts.nix        flake-parts `systems`
+  core/                  nixpkgs, nix-settings, home-manager, boot, pki, locale, networking,
+                         appimage, audio, bluetooth, podman, services
+  desktop/               plasma, fonts, styles, kitty, userdirs
+  shell/fish.nix
+  apps/                  browsers, cli, essentials, flatpak (base);
+                         editors, extras, obs-studio, vesktop, vscode (workstation)
+  gaming/                gaming, ntsync
+  hardware/              tablet, librepods, volume-fix
+  net/vpn.nix
+  optional/              ananicy, mongo — in no aggregate, inert
+  hosts/                 universe, tarot, installer
+```
+
+Anything outside `modules/` is structurally excluded from auto-import — a stronger guarantee than
+the `/_` rule, and greppable.
+
 ### The `gen/` indirection (important, easy to miss)
 
-`systems/tarot/configuration.nix` and `systems/universe/configuration.nix` import
-`../../gen/<name>.nix` and `../../gen/<name>-hardware.nix`. **`gen/` is gitignored and does not
-exist in this repo.** It is created at install time by `systems/installer/install-tui.sh`, which
-writes per-machine secrets/identity (hostname, username, hashed passwords, tmpfs layout) and the
-`nixos-generate-config`-captured hardware config into `/etc/cakeos/gen/` on the target machine.
-`scripts/update-cakeos` deliberately excludes `gen/` from its rsync when pulling upstream changes,
-so a deployed machine's local identity survives updates.
+`gen/` holds per-machine identity — hostname, username, hashed passwords, tmpfs layout — plus the
+`nixos-generate-config` hardware config. It is **gitignored and does not exist in a fresh clone**.
+It is written at install time by `installer/install-tui.sh` into `/etc/cakeos/gen/`, and
+`scripts/update-cakeos` deliberately excludes it when rsyncing upstream changes so a deployed
+machine's identity survives updates.
 
-Consequently, `nixosConfigurations.tarot`/`.universe` **cannot evaluate from a fresh clone** —
-only `installer` can. `gen-presets/*.nix` are stand-ins for `gen/` used only by `build-vm.sh` when
-VM-testing the `universe`/`tarot` configs locally (it copies them into a temp `gen/` dir before
-building), enabling autologin for convenience; they are not used on real installs.
+`modules/hosts/{universe,tarot}.nix` import it behind a `builtins.pathExists` guard with a
+**fallback module**. The guard alone is not enough: `nix flake check` forces
+`config.system.build.toplevel` per host, which fires assertions — without a root filesystem the
+`fileSystems` assertion fails, and home-manager throws deriving `home.username` from an empty
+`users.users`. The fallback supplies the minimum to satisfy them.
 
-### Flake layout (`flake.nix`)
+This is what makes universe and tarot checkable at all; previously only `installer` could be
+evaluated from a clean clone. The trade is that a missing `gen/` on a real machine becomes a
+successful build rather than a hard error, so it is made loud three ways — **all three are load
+bearing, do not remove any of them**:
 
-- Single system (`x86_64-linux`). `nixosConfigurations` has three outputs: `universe`, `tarot`,
-  `installer`.
-- `commonSystemModules` / `commonHomeModules` are shared across `universe` and `tarot`: disko,
-  home-manager, spicetify, and the top-level `system.nix`. `installer` does not use these — it's
-  built directly on top of `installation-cd-base.nix` + disko.
-- Each host wires its own `home-manager.users.<username>` to its own `systems/<name>/home.nix`.
-  Usernames differ per host (`majo` on universe, `cakeos` on tarot) — don't assume a shared username.
+- `warnings`, printed on every rebuild
+- `system.nixos.tags = [ "NO-GEN" ]`, so the boot entry is visibly labelled
+- `hashedPassword = "!"` on both the user and root, so the generation cannot be logged into
 
-### Module structure (`modules/`)
+`home.username` / `home.homeDirectory` are deliberately **not** set in the home-manager profiles.
+As a NixOS module, home-manager derives both from `users.users.<name>` without `mkDefault`, so
+`gen/<host>.nix` stays the single source of truth for identity.
 
-Split along two axes: `system/` (NixOS modules, root-level config) vs `home/` (home-manager, per
-user), then by concern:
-- `modules/system/core/` — locale, low-level fixes (e.g. `volume-fix.nix`)
-- `modules/system/plasma/` — KDE Plasma desktop stack (boot splash, fonts, WM tweaks, gaming
-  tweaks like `ananicy`, styling)
-- `modules/system/apps/` — optional system services/hardware support (steam, vpn, tablet driver,
-  librepods, ntsync, mongo — mongo is currently commented out in `universe/configuration.nix`)
-- `modules/home/apps/` — user-facing application packages (browsers, editors, gaming, flatpak,
-  vscode, etc.)
-- `modules/home/plasma/` — user-level Plasma config (kitty terminal, style symlinks, XDG user
-  dirs)
-- `modules/home/shell/` — shell config (fish)
+### Scripts coupled to the flake shape
 
-Each host (`systems/<name>/configuration.nix` and `home.nix`) picks and chooses which module
-files to import — the module lists intentionally differ per host (e.g. only `universe` imports
-gaming/steam/vpn/tablet modules; only `tarot` is the minimal/appliance-style config).
+- `install-tui.sh:152` derives the host menu live from `nix flake show`'s
+  `nixosConfigurations` keys minus `installer` — changing how hosts are enumerated changes the menu.
+- `install-tui.sh` hardcodes `installer/disko-config.nix` and writes `installer/disko-params.nix`.
+  Safe to rely on: `FLAKE_URL` is `/etc/cakeos`, which is `environment.etc."cakeos".source = self` —
+  the same flake revision that produced the running ISO, so script and layout cannot skew.
+- `scripts/update-cakeos:64` infers the config name from `ls gen/*.nix`, so the `gen/<name>.nix`
+  **filename is load-bearing**. It also deletes any `.git` in `/etc/cakeos`, because flakes only see
+  git-tracked files and a `.git` there would hide the untracked `gen/`.
 
-### `systems/installer/`
+### Known issue (pre-existing)
 
-- `configuration.nix` embeds the *entire flake source* into the ISO at `/etc/cakeos` (via
-  `environment.etc."cakeos".source = inputs.self`) and autologins root into
-  `install-tui.sh` on tty1.
-- `install-tui.sh` is a `dialog`-based TUI: detects RAM/disks, offers WiFi setup and tmpfs/RAM
-  ramdisk options, partitions via `disko-config.nix` (parameterized by disk + swap size via
-  `--argstr`), copies the flake to `/mnt/etc/cakeos`, generates hardware config into
-  `gen/<config>-hardware.nix`, writes identity/secrets into `gen/<config>.nix`, then runs
-  `nixos-install --flake /mnt/etc/cakeos#<config>`.
-- `disko-params.nix` is a checked-in *stub* (defaults) for the disko args so the flake can
-  evaluate outside the installer; the TUI overwrites it on the target with real values.
-- `user-settings.nix` is a similar checked-in stub for `universe`'s identity, overridden by real
-  `gen/` values post-install.
-
-### Scripts
-
-- `scripts/update-cakeos` — deployed to `/etc/cakeos` on real installs; pulls latest `main` from
-  the upstream GitHub repo via a temp clone + rsync, explicitly preserving `gen/` and never
-  leaving a `.git` dir in `/etc/cakeos` (a `.git` there would make Nix treat `gen/` as untracked
-  and ignore it under flakes' git-tracked-files-only semantics).
-- `scripts/hello-cakeos`, `scripts/boot-windows` (EFI boot-to-Windows helper),
-  `scripts/prism-tmp-wrapper` (stages a Prism Launcher Minecraft instance into `/tmp` for
-  performance, syncs back on exit) — these get symlinked into the user's `~/.local/bin` via
-  `modules/home/apps/essentials.nix` (`home.file.".local/bin"`).
-
-### CI (`.github/workflows/release.yml`)
-
-Manually triggered (`workflow_dispatch`) — builds the installer ISO and publishes it as a GitHub
-release tagged either with a supplied tag or a timestamp.
+`install-tui.sh` lets the operator pick any username for non-`universe` configs (defaulting to
+`cakeos`), while `modules/hosts/tarot.nix` hardcodes `home-manager.users.cakeos`. A tarot install
+under a different username gets no home-manager config. **Do not fix by deriving the user set from
+`config.users.users`** — that is guaranteed infinite recursion, since home-manager's NixOS module
+defines `users.users` from `home-manager.users`. The fix belongs in `install-tui.sh`.
 
 ## Conventions
 
-- Nix formatting: 4-space indent (see `.editorconfig`), no trailing final newline enforced either
-  way.
-- `system.stateVersion` / `home.stateVersion` are pinned to `"26.05"` across all hosts — keep them
-  in sync when touching host configs.
-- Prefer adding a new file under the appropriate `modules/{system,home}/<category>/` directory and
-  importing it from the relevant host config, rather than growing an existing host
-  `configuration.nix`/`home.nix` inline.
+- Nix formatting: 2-space indent in practice (note `.editorconfig` says 4 — the files disagree with
+  it).
+- `system.stateVersion` / `home.stateVersion` are pinned to `"26.05"` — keep them in sync.
+- One feature per file, named for the feature. A file may write to several aggregates and several
+  classes; that is the point. Prefer a new file over growing an existing one.
+- **Do not add `enable` options to first-party modules.** In the dendritic pattern, importing a
+  module *is* enabling it; opting out means not adding it to an aggregate.

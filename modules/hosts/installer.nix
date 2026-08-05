@@ -16,10 +16,13 @@
     environment.etc."cakeos".source = self;
   };
 
+  # inputs.disko.nixosModules.disko is deliberately NOT imported: disko.devices
+  # is set nowhere in this repo. installer/disko-config.nix is a standalone
+  # expression handed to the disko CLI with --argstr, and what the ISO actually
+  # needs is the pkgs.disko binary, which configuration.nix installs.
   flake.nixosConfigurations.installer = inputs.nixpkgs.lib.nixosSystem {
     modules = [
       "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-base.nix"
-      inputs.disko.nixosModules.disko
       config.flake.modules.nixos.installer
       ../../installer/configuration.nix
     ];

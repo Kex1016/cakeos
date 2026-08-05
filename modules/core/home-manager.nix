@@ -6,16 +6,12 @@
 #   spicetify    -> modules/apps/essentials.nix
 #   nix-flatpak  -> modules/apps/flatpak.nix
 # so each option declaration travels with its only consumer.
-#
-# `extraSpecialArgs` is still here purely as a safety net for anything that has
-# not yet been converted; it is removed in the cleanup phase.
 { inputs, ... }:
 {
   flake.modules.nixos.base = {
     imports = [ inputs.home-manager.nixosModules.home-manager ];
 
     home-manager = {
-      extraSpecialArgs = { inherit inputs; };
       useGlobalPkgs = true;
       useUserPackages = true;
       backupFileExtension = "bak";
