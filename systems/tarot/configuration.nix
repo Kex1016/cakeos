@@ -4,11 +4,11 @@
   imports = [
     ../../gen/tarot-hardware.nix
     ../../gen/tarot.nix
-    ../../modules/system/plasma/boot.nix
-    ../../modules/system/plasma/fonts.nix
-    ../../modules/system/plasma/wm.nix
-    ../../modules/system/plasma/styles.nix
-    ../../modules/system/core/locale.nix
+    ../../modules/_system/plasma/boot.nix
+    ../../modules/_system/plasma/fonts.nix
+    ../../modules/_system/plasma/wm.nix
+    ../../modules/_system/plasma/styles.nix
+    ../../modules/_system/core/locale.nix
   ];
 
   services.flatpak.enable = true;

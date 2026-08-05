@@ -4,19 +4,19 @@
   imports = [
     ../../gen/universe-hardware.nix
     ../../gen/universe.nix
-    ../../modules/system/plasma/boot.nix
-    ../../modules/system/plasma/fonts.nix
-    ../../modules/system/plasma/gaming.nix
-    ../../modules/system/plasma/wm.nix
-    ../../modules/system/apps/steam.nix
-    ../../modules/system/apps/ntsync.nix
-    ../../modules/system/apps/vpn.nix
-    ../../modules/system/apps/librepods.nix
-    ../../modules/system/apps/tablet.nix
-    ../../modules/system/plasma/styles.nix
-    ../../modules/system/core/locale.nix
-    ../../modules/system/core/volume-fix.nix
-    #../../modules/system/apps/mongo.nix
+    ../../modules/_system/plasma/boot.nix
+    ../../modules/_system/plasma/fonts.nix
+    ../../modules/_system/plasma/gaming.nix
+    ../../modules/_system/plasma/wm.nix
+    ../../modules/_system/apps/steam.nix
+    ../../modules/_system/apps/ntsync.nix
+    ../../modules/_system/apps/vpn.nix
+    ../../modules/_system/apps/librepods.nix
+    ../../modules/_system/apps/tablet.nix
+    ../../modules/_system/plasma/styles.nix
+    ../../modules/_system/core/locale.nix
+    ../../modules/_system/core/volume-fix.nix
+    #../../modules/_system/apps/mongo.nix
   ];
 
   nix.settings.substituters = [ "https://attic.xuyh0120.win/lantian" ];

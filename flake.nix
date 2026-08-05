@@ -2,12 +2,9 @@
   description = "The main OS flake for CakeOS.";
 
   inputs = {
-    # Utils
-    systems.url = "github:nix-systems/x86_64-linux";
-    flake-utils = {
-      url = "github:numtide/flake-utils";
-      inputs.systems.follows = "systems";
-    };
+    # Flake framework
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    import-tree.url = "github:vic/import-tree";
 
     # OS
     nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
@@ -43,84 +40,27 @@
     affinity-nix.url = "github:mrshmllow/affinity-nix";
   };
 
+  # This file is an entry point and nothing else. Every other .nix file under
+  # modules/ is a flake-parts module and is imported automatically, so adding a
+  # feature never means editing this file.
   outputs =
-    {
-      self,
-      nixpkgs,
-      flake-utils,
-      ...
-    }@inputs:
-    let
-      system = "x86_64-linux";
+    inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        # Declares `flake.modules.<class>.<name>` as
+        # lazyAttrsOf (lazyAttrsOf deferredModule).
+        #
+        # This is NOT part of flake-parts core. Without it `flake.modules` falls
+        # through to the freeform `flake` type, which is `types.unique` and so
+        # accepts exactly one definition -- meaning the second file to define
+        # `flake.modules` fails with an error that reads like a typo report.
+        inputs.flake-parts.flakeModules.modules
 
-      lib = nixpkgs.lib;
-      pkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-        overlays = [
-          inputs.nur.overlays.default
-          inputs.nix-cachyos-kernel.overlays.pinned
-          inputs.millennium.overlays.default
-          inputs.affinity-nix.overlays.default
-        ];
-      };
-
-      specialArgs = {
-        inherit inputs;
-      };
-
-      commonHomeModules = [
-        inputs.nix-flatpak.homeManagerModules.nix-flatpak
-        inputs.zen-browser.homeModules.beta
-        (inputs.spicetify-nix.homeManagerModules.default)
+        # Recursively imports every *.nix under ./modules whose path contains no
+        # "/_" component. That underscore rule is what keeps the not-yet-migrated
+        # modules/_system and modules/_home trees -- which are NixOS and
+        # home-manager modules, not flake-parts modules -- out of this evaluation.
+        (inputs.import-tree ./modules)
       ];
-
-      commonSystemModules = [
-        inputs.disko.nixosModules.disko
-        inputs.home-manager.nixosModules.home-manager
-        (inputs.spicetify-nix.nixosModules.spicetify)
-        ./system.nix
-        {
-          home-manager = {
-            extraSpecialArgs = specialArgs;
-            useGlobalPkgs = true;
-            useUserPackages = true;
-            backupFileExtension = "bak";
-            sharedModules = commonHomeModules;
-          };
-        }
-      ];
-    in
-    {
-      nixosConfigurations = {
-        universe = lib.nixosSystem {
-          inherit system pkgs specialArgs;
-          modules = commonSystemModules ++ [
-            ./systems/universe/configuration.nix
-            {
-              home-manager.users.majo = import ./systems/universe/home.nix;
-            }
-          ];
-        };
-
-        tarot = lib.nixosSystem {
-          inherit system pkgs specialArgs;
-          modules = commonSystemModules ++ [
-            ./systems/tarot/configuration.nix
-            {
-              home-manager.users.cakeos = import ./systems/tarot/home.nix;
-            }
-          ];
-        };
-
-        installer = lib.nixosSystem {
-          inherit system pkgs specialArgs;
-          modules = [
-            "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-base.nix"
-            inputs.disko.nixosModules.disko
-            ./systems/installer/configuration.nix
-          ];
-        };
-      };
     };
 }
