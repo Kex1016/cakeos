@@ -1,7 +1,7 @@
 { config, inputs, legacy, ... }:
 {
   flake.nixosConfigurations.universe = inputs.nixpkgs.lib.nixosSystem {
-    inherit (legacy) system pkgs specialArgs;
+    inherit (legacy) specialArgs;
     modules = [
       config.flake.modules.nixos.base
       config.flake.modules.nixos.workstation
