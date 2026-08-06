@@ -14,6 +14,7 @@
 
     antigravity-fhs
     affinity-v3
+    jetbrains.idea
     inputs.nvf.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 }

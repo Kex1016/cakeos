@@ -10,7 +10,6 @@ in
     qpwgraph
     inotify-tools
     file
-    jetbrains.idea-oss
     yubioath-flutter
     easyeffects
     onlyoffice-desktopeditors
