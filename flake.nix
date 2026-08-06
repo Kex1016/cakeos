@@ -41,6 +41,7 @@
     spicetify-nix.url = "github:Gerg-L/spicetify-nix";
     millennium.url = "github:SteamClientHomebrew/Millennium/next?dir=packages/nix";
     affinity-nix.url = "github:mrshmllow/affinity-nix";
+    qylock.url = "github:Darkkal44/qylock";
   };
 
   outputs =
@@ -79,6 +80,7 @@
         inputs.disko.nixosModules.disko
         inputs.home-manager.nixosModules.home-manager
         (inputs.spicetify-nix.nixosModules.spicetify)
+        inputs.qylock.nixosModules.default
         ./system.nix
         {
           home-manager = {
