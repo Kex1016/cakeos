@@ -47,6 +47,7 @@ in
     links = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
+        ".claude"
         "Docker"
         "Documents"
         "Downloads"
