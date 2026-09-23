@@ -1,6 +1,6 @@
-{ ... }:
+{ lib, config, ... }:
 
-{
+lib.mkIf (builtins.elem "gaming" config.cakeos.groups) {
   # Enable ntsync kernel module for Windows-style synchronization
   boot.kernelModules = [ "ntsync" ];
 

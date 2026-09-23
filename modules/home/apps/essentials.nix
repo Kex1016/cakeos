@@ -1,18 +1,13 @@
-{ pkgs, inputs, ... }:
+{ pkgs, ... }:
 
-let
-  spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};
-in
 {
   home.packages = with pkgs; [
     pavucontrol
-    gnome-font-viewer
     qpwgraph
     inotify-tools
     file
     yubioath-flutter
     easyeffects
-    onlyoffice-desktopeditors
   ];
 
   xdg.autostart.enable = true;
@@ -20,15 +15,6 @@ in
   programs = {
     mpv = {
       enable = true;
-    };
-
-    spicetify = {
-      enable = true;
-      enabledExtensions = with spicePkgs.extensions; [
-        adblockify
-        hidePodcasts
-        shuffle
-      ];
     };
 
     zathura = {
@@ -42,10 +28,6 @@ in
   };
 
   services = {
-    kdeconnect = {
-      enable = true;
-      indicator = true;
-    };
     easyeffects = {
       enable = true;
     };
