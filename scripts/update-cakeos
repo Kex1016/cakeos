@@ -1,86 +1,106 @@
-#!/usr/bin/env bash
+#!/usr/bin/env nu
+
 # CakeOS Update Script
-# Updates the system configuration from the upstream repository while preserving dynamic elements.
+# Updates the system configuration from the upstream repository while
+# preserving dynamic elements.
 
-set -e
-
-# Configuration
 # Ssh method
-REPO_URL="git@github.com:Kex1016/cakeos.git"
+const REPO_URL = "git@github.com:Kex1016/cakeos.git"
 # Https method
-# REPO_URL="https://github.com/Kex1016/cakeos.git"
+# const REPO_URL = "https://github.com/Kex1016/cakeos.git"
 
-BRANCH="main"
-TARGET_DIR="/etc/cakeos"
+# TEMPORARY: track the modularity branch until it lands on main.
+const BRANCH = "modularity"
+const TARGET_DIR = "/etc/cakeos"
 
-# Ensure we are running as root
-if [ "$EUID" -ne 0 ]; then
-    echo "==> This script needs root privileges to update $TARGET_DIR."
-    echo "==> Requesting sudo..."
-    exec sudo "$0" "$@"
-fi
+def main [] {
+    # Ensure we are running as root.
+    if ((^id -u | into int) != 0) {
+        print $"==> This script needs root privileges to update ($TARGET_DIR)."
+        print "==> Requesting sudo..."
+        exec sudo $nu.current-exe $env.CURRENT_FILE
+    }
 
-# Ensure target directory exists
-mkdir -p "$TARGET_DIR"
-cd "$TARGET_DIR"
+    # Ensure target directory exists.
+    mkdir $TARGET_DIR
+    cd $TARGET_DIR
 
-echo "==> Updating CakeOS configuration in $TARGET_DIR..."
+    print $"==> Updating CakeOS configuration in ($TARGET_DIR)..."
 
-# For /etc/cakeos, we must NEVER have a .git folder or Nix will ignore 'gen/'
-# Ensure any old .git is gone
-if [ -d ".git" ]; then
-    rm -rf .git
-    echo "==> Removed existing .git folder to keep 'gen/' visible."
-fi
+    # For /etc/cakeos, we must NEVER have a .git folder or Nix will ignore
+    # 'gen/'. Ensure any old .git is gone.
+    if (".git" | path exists) {
+        rm -rf .git
+        print "==> Removed existing .git folder to keep 'gen/' visible."
+    }
 
-TMP_DIR=$(mktemp -d)
-echo "==> Cloning latest changes to temporary directory..."
-if ! git clone --depth 1 -q "$REPO_URL" "$TMP_DIR"; then
-    echo "!!! Error: Clone failed."
-    rm -rf "$TMP_DIR"
-    exit 1
-fi
+    let tmp_dir = (^mktemp -d | str trim)
+    print "==> Cloning latest changes to temporary directory..."
 
-echo "==> Syncing files to $TARGET_DIR..."
-# We use rsync to sync files while preserving 'gen/' and excluding '.git'
-# If rsync is not available, we use nix-shell to run it
-RSYNC_CMD="rsync -av --delete --exclude='.git' --exclude='gen/' '$TMP_DIR/' '$TARGET_DIR/'"
-if command -v rsync >/dev/null 2>&1; then
-    eval "$RSYNC_CMD > /dev/null"
-else
-    echo "==> rsync not found. Using nix-shell to run sync..."
-    nix shell nixpkgs#rsync -c bash -c "$RSYNC_CMD > /dev/null"
-fi
+    try {
+        ^git clone --depth 1 -b $BRANCH -q $REPO_URL $tmp_dir
+    } catch {
+        print "!!! Error: Clone failed."
+        rm -rf $tmp_dir
+        exit 1
+    }
 
-rm -rf "$TMP_DIR"
+    print $"==> Syncing files to ($TARGET_DIR)..."
+    # rsync keeps 'gen/' and skips '.git'. If rsync is missing we borrow one
+    # from nixpkgs for the duration of the sync.
+    let rsync_args = [
+        -a
+        --delete
+        --exclude=.git
+        --exclude=gen/
+        $"($tmp_dir)/"
+        $"($TARGET_DIR)/"
+    ]
 
-echo "==> Done! Upstream changes have been applied."
-echo "==> Dynamic elements (like the 'gen/' folder) have been preserved."
+    if (which rsync | is-not-empty) {
+        ^rsync ...$rsync_args out> /dev/null
+    } else {
+        print "==> rsync not found. Using nix shell to run sync..."
+        ^nix shell nixpkgs#rsync -c rsync ...$rsync_args out> /dev/null
+    }
 
-# Ask to rebuild
-read -p "Would you like to apply the changes now? (nixos-rebuild boot) [y/N]: " confirm
-if [[ "$confirm" =~ ^[Yy]$ ]]; then
-    # Detect the current configuration name from gen/
-    CONFIG_NAME=$(ls gen/*.nix 2>/dev/null | grep -v "hardware" | head -n 1 | xargs basename -s .nix)
-    
-    if [ -z "$CONFIG_NAME" ]; then
-        echo "Could not automatically detect configuration name. Please run nixos-rebuild manually."
-        exit 0
-    fi
+    rm -rf $tmp_dir
 
-    echo "==> Rebuilding system for configuration: $CONFIG_NAME..."
-    nixos-rebuild boot --flake ".#$CONFIG_NAME"
+    print "==> Done! Upstream changes have been applied."
+    print "==> Dynamic elements (like the 'gen/' folder) have been preserved."
 
-    if [ $? -eq 0 ]; then
-        echo "==> Rebuild completed successfully."
-        echo "==> Would you like to reboot now? (Y/n): "
-        read -r reboot_confirm
-        [[ -z "$reboot_confirm" ]] && reboot_confirm="Y"
-        if [[ "$reboot_confirm" =~ ^[Yy]$ ]]; then
-            echo "==> Rebooting..."
-            sudo reboot
-        fi
-    else
-        echo "==> Rebuild failed. Please check the logs."
-    fi
-fi
+    # Ask to rebuild.
+    let confirm = (input "Would you like to apply the changes now? (nixos-rebuild boot) [y/N]: ")
+    if ($confirm !~ '(?i)^y') {
+        return
+    }
+
+    # Detect the current configuration name from gen/.
+    let config_name = (
+        glob "gen/*.nix"
+        | where { |p| not ($p | path basename | str contains "hardware") }
+        | each { |p| $p | path basename | str replace --regex '\.nix$' "" }
+        | first
+    )
+
+    if ($config_name | is-empty) {
+        print "Could not automatically detect configuration name. Please run nixos-rebuild manually."
+        return
+    }
+
+    print $"==> Rebuilding system for configuration: ($config_name)..."
+
+    try {
+        ^nixos-rebuild boot --flake $".#($config_name)"
+    } catch {
+        print "==> Rebuild failed. Please check the logs."
+        return
+    }
+
+    print "==> Rebuild completed successfully."
+    let reboot_confirm = (input "==> Would you like to reboot now? (Y/n): ")
+    if ($reboot_confirm == "" or $reboot_confirm =~ '(?i)^y') {
+        print "==> Rebooting..."
+        ^sudo reboot
+    }
+}

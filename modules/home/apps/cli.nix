@@ -6,7 +6,6 @@
     dust
     duf
     nixfmt
-    direnv
     pipes
     wget
     git
@@ -20,6 +19,8 @@
     jq
     tokei
     ffmpeg
+    imagemagick # used by scripts/compress-media
+    gettext
     rustup
     clang
     android-tools
@@ -29,11 +30,15 @@
     gpu-screen-recorder
     docker-compose
     inputs.nvf.packages.${pkgs.stdenv.hostPlatform.system}.default
-    kdePackages.kdialog
     zenity
   ];
 
   programs = {
+    direnv = {
+      enable = true;
+      nix-direnv.enable = true;
+      enableNushellIntegration = true;
+    };
     git = {
       enable = true;
       settings = {
@@ -61,7 +66,7 @@
     };
     eza = {
       enable = true;
-      enableFishIntegration = true;
+      enableNushellIntegration = true;
       colors = "auto";
       icons = "auto";
       git = true;
@@ -73,7 +78,7 @@
     ripgrep.enable = true;
     zoxide = {
       enable = true;
-      enableFishIntegration = true;
+      enableNushellIntegration = true;
       options = [ "--cmd cd" ];
     };
     fastfetch = {

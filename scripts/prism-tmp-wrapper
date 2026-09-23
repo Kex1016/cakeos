@@ -1,101 +1,121 @@
-#!/usr/bin/env bash
+#!/usr/bin/env nu
 
 # Prism Launcher Temp Wrapper
 # Moves/Copies the instance to /tmp for faster performance (e.g., RAM disk)
 # and syncs changes back on exit.
 
 # --- Configuration ---
-TEMP_BASE="/tmp/prism-instances"
+const TEMP_BASE = "/tmp/prism-instances"
 # Add folders to exclude from sync if they are too large and unnecessary
-EXCLUDES=("--exclude=logs/" "--exclude=webcache/" "--exclude=webcache2/")
+const EXCLUDES = [
+    "--exclude=logs/"
+    "--exclude=webcache/"
+    "--exclude=webcache2/"
+]
 
 # --- GUI Helpers ---
-show_error() {
-    local msg="$1"
-    if command -v zenity >/dev/null 2>&1; then
-        zenity --error --text="$msg" --title="Prism Wrapper Error"
-    elif command -v kdialog >/dev/null 2>&1; then
-        kdialog --error "$msg" --title "Prism Wrapper Error"
-    else
-        echo "Error: $msg"
-    fi
+def show-error [msg: string] {
+    if (which zenity | is-not-empty) {
+        ^zenity --error --title "Prism Wrapper Error" --text $msg
+    } else {
+        print -e $"Error: ($msg)"
+    }
 }
 
-# --- Initialization ---
-if [ -z "$INST_DIR" ]; then
-    show_error "This script must be run as a Prism Launcher wrapper command."
-    exit 1
-fi
+# Run `action` while a pulsating zenity dialog is on screen. Nushell cannot
+# stream a running block's stdout into zenity the way the old bash pipeline
+# did, so the dialog is spawned as a job and killed once the work is done.
+def with-progress [text: string, action: closure] {
+    if (which zenity | is-empty) {
+        do $action
+        return
+    }
 
-if ! command -v rsync >/dev/null 2>&1; then
-    show_error "rsync is required for this script. Please install it."
-    exit 1
-fi
+    let dialog = (job spawn {
+        ^zenity --progress --title "Prism Wrapper" --text $text --pulsate --auto-close --no-cancel
+    })
 
-INSTANCE_NAME=$(basename "$INST_DIR")
-INSTANCE_ID="${INST_ID:-$INSTANCE_NAME}"
-TEMP_DIR="$TEMP_BASE/$INSTANCE_ID"
-ORIG_BAK="$INST_DIR.orig_bak"
+    try { do $action }
+    try { job kill $dialog }
+}
 
-# Cleanup function to restore original state
-cleanup() {
-    if [ -d "$TEMP_DIR" ] && [ -d "$ORIG_BAK" ]; then
-        (
-            echo "# Syncing changes back to original directory..."
-            rsync -a --delete "${EXCLUDES[@]}" "$TEMP_DIR/" "$ORIG_BAK/"
-            
-            echo "# Restoring original directory structure..."
-            # Point symlink back to backup before final move to ensure path is always valid
-            ln -sfT "$ORIG_BAK" "$INST_DIR"
-            rm -f "$INST_DIR"
-            mv "$ORIG_BAK" "$INST_DIR"
-            
-            echo "# Cleaning up temporary files..."
-            rm -rf "$TEMP_DIR"
-        ) | zenity --progress --title="Prism Wrapper" --text="Finalizing instance and syncing back..." --pulsate --auto-close --no-cancel 2>/dev/null || {
-            # Fallback if zenity is not available or fails
-            rsync -a --delete "${EXCLUDES[@]}" "$TEMP_DIR/" "$ORIG_BAK/"
-            ln -sfT "$ORIG_BAK" "$INST_DIR"
-            rm -f "$INST_DIR"
-            mv "$ORIG_BAK" "$INST_DIR"
-            rm -rf "$TEMP_DIR"
+# Sync the RAM-disk copy back over the backup and put the original directory
+# structure back in place.
+def restore [inst_dir: string, orig_bak: string, temp_dir: string] {
+    with-progress "Finalizing instance and syncing back..." {
+        if ($temp_dir | path exists) {
+            ^rsync -a --delete ...$EXCLUDES $"($temp_dir)/" $"($orig_bak)/"
         }
-    fi
+
+        # Point the symlink back at the backup before the final move so the
+        # path is never dangling.
+        ^ln -sfT $orig_bak $inst_dir
+        rm -f $inst_dir
+        mv $orig_bak $inst_dir
+        rm -rf $temp_dir
+    }
 }
 
-# Trap signals
-trap cleanup EXIT ERR SIGINT SIGTERM
+# `--wrapped` keeps flags in the launched command (e.g. `java -Xmx4G -jar ...`)
+# from being parsed as flags of this script.
+def --wrapped main [...rest: string] {
+    # --- Initialization ---
+    if ($env.INST_DIR? | is-empty) {
+        show-error "This script must be run as a Prism Launcher wrapper command."
+        exit 1
+    }
 
-# --- Setup Phase ---
-if [ -L "$INST_DIR" ]; then
-    show_error "$INST_DIR is already a symlink. Is another instance already running with this wrapper?"
-    exit 1
-fi
+    if (which rsync | is-empty) {
+        show-error "rsync is required for this script. Please install it."
+        exit 1
+    }
 
-mkdir -p "$TEMP_BASE"
+    let inst_dir = $env.INST_DIR
+    let instance_name = ($inst_dir | path basename)
+    let instance_id = ($env.INST_ID? | default $instance_name)
+    let temp_dir = ([$TEMP_BASE $instance_id] | path join)
+    let orig_bak = $"($inst_dir).orig_bak"
 
-# 1. Remove stale backup if it exists (from a previous crash)
-rm -rf "$ORIG_BAK"
+    # --- Setup Phase ---
+    # A leftover backup means a previous run crashed. Recover from it instead
+    # of deleting it -- unlike the old bash version this script cannot trap
+    # SIGINT/SIGTERM, so the backup may be the only intact copy.
+    if ($orig_bak | path exists) {
+        print $"Recovering leftover backup from a previous run: ($orig_bak)"
+        restore $inst_dir $orig_bak $temp_dir
+    }
 
-# 2. Move original to backup and create a temporary symlink immediately
-# to avoid disappearing from Prism Launcher's view.
-mv "$INST_DIR" "$ORIG_BAK"
-ln -s "$ORIG_BAK" "$INST_DIR"
+    if (($inst_dir | path type) == "symlink") {
+        show-error $"($inst_dir) is already a symlink. Is another instance already running with this wrapper?"
+        exit 1
+    }
 
-# 3. Sync to temporary directory
-(
-    echo "# Copying instance to $TEMP_DIR..."
-    rsync -a "${EXCLUDES[@]}" "$ORIG_BAK/" "$TEMP_DIR/"
-) | zenity --progress --title="Prism Wrapper" --text="Preparing instance in RAM..." --pulsate --auto-close --no-cancel 2>/dev/null || {
-    # Fallback
-    rsync -a "${EXCLUDES[@]}" "$ORIG_BAK/" "$TEMP_DIR/"
+    mkdir $TEMP_BASE
+
+    # Move original to backup and create a temporary symlink immediately so
+    # the instance does not disappear from Prism Launcher's view.
+    mv $inst_dir $orig_bak
+    ^ln -s $orig_bak $inst_dir
+
+    # Sync to temporary directory.
+    with-progress "Preparing instance in RAM..." {
+        ^rsync -a ...$EXCLUDES $"($orig_bak)/" $"($temp_dir)/"
+    }
+
+    # Point the symlink to the RAM disk version.
+    ^ln -sfT $temp_dir $inst_dir
+
+    # --- Launch Phase ---
+    if ($rest | is-empty) {
+        show-error "No command was passed to the wrapper."
+        restore $inst_dir $orig_bak $temp_dir
+        exit 1
+    }
+
+    try { ^($rest | first) ...($rest | skip 1) } catch { }
+    let exit_code = $env.LAST_EXIT_CODE
+
+    restore $inst_dir $orig_bak $temp_dir
+
+    exit $exit_code
 }
-
-# 4. Point the symlink to the RAM disk version
-ln -sfT "$TEMP_DIR" "$INST_DIR"
-
-# --- Launch Phase ---
-"$@"
-EXIT_CODE=$?
-
-exit $EXIT_CODE

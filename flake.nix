@@ -41,7 +41,6 @@
     spicetify-nix.url = "github:Gerg-L/spicetify-nix";
     millennium.url = "github:SteamClientHomebrew/Millennium/next?dir=packages/nix";
     affinity-nix.url = "github:mrshmllow/affinity-nix";
-    qylock.url = "github:Darkkal44/qylock";
   };
 
   outputs =
@@ -80,7 +79,6 @@
         inputs.disko.nixosModules.disko
         inputs.home-manager.nixosModules.home-manager
         (inputs.spicetify-nix.nixosModules.spicetify)
-        inputs.qylock.nixosModules.default
         ./system.nix
         {
           home-manager = {
@@ -92,28 +90,32 @@
           };
         }
       ];
+      desktops = import ./modules/desktops/list.nix;
+
+      # One generic host. Which desktop, which package groups, the username and
+      # so on all come from gen/<genName>.nix, which the installer writes.
+      mkHost =
+        genName:
+        lib.nixosSystem {
+          inherit system pkgs;
+          specialArgs = specialArgs // {
+            inherit genName;
+          };
+          modules = commonSystemModules ++ [ ./systems/cakeos/configuration.nix ];
+        };
     in
     {
-      nixosConfigurations = {
-        universe = lib.nixosSystem {
-          inherit system pkgs specialArgs;
-          modules = commonSystemModules ++ [
-            ./systems/universe/configuration.nix
-            {
-              home-manager.users.majo = import ./systems/universe/home.nix;
-            }
-          ];
-        };
+      # The installer reads this to build its desktop menu.
+      cakeosDesktops = desktops;
 
-        tarot = lib.nixosSystem {
-          inherit system pkgs specialArgs;
-          modules = commonSystemModules ++ [
-            ./systems/tarot/configuration.nix
-            {
-              home-manager.users.cakeos = import ./systems/tarot/home.nix;
-            }
-          ];
-        };
+      nixosConfigurations = {
+        cakeos = mkHost "cakeos";
+
+        # Machines installed before the single-config layout still have
+        # gen/universe.nix or gen/tarot.nix on disk; keep their flake attrs
+        # resolvable so `update-cakeos` does not break on them.
+        universe = mkHost "universe";
+        tarot = mkHost "tarot";
 
         installer = lib.nixosSystem {
           inherit system pkgs specialArgs;

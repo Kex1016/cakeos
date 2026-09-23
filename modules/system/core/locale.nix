@@ -1,6 +1,25 @@
-{ ... }:
+{ config, lib, ... }:
+let
+  # "hu+qwerty" -> layout "hu", variant "qwerty"
+  layouts = config.cakeos.keyboardLayouts;
+  split = l: lib.splitString "+" l;
+  layoutNames = map (l: builtins.head (split l)) layouts;
+  variantNames = map (
+    l:
+    let
+      p = split l;
+    in
+    if builtins.length p > 1 then builtins.elemAt p 1 else ""
+  ) layouts;
+in
 {
-  time.timeZone = "Europe/Budapest";
+  time.timeZone = config.cakeos.timeZone;
+
+  services.xserver.xkb = {
+    layout = lib.concatStringsSep "," layoutNames;
+    variant = lib.concatStringsSep "," variantNames;
+  };
+  console.useXkbConfig = true;
 
   i18n.defaultLocale = "en_US.UTF-8";
 

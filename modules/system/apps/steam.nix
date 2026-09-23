@@ -1,6 +1,11 @@
-{ pkgs, ... }:
-
 {
+  pkgs,
+  lib,
+  config,
+  ...
+}:
+
+lib.mkIf (builtins.elem "gaming" config.cakeos.groups) {
   programs.steam = {
     enable = true;
     remotePlay.openFirewall = true;
