@@ -18,7 +18,6 @@ lib.mkIf (builtins.elem "development" osConfig.cakeos.groups) {
 
     nodejs
 
-    antigravity-ide-fhs
     jetbrains.idea
     gitkraken
     inputs.nvf.packages.${pkgs.stdenv.hostPlatform.system}.default

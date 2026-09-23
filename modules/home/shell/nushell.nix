@@ -35,30 +35,6 @@
     };
 
     extraConfig = ''
-      # Log commands that could not be found. Replaces the fish
-      # `command_not_found_handler` function.
-      $env.config.hooks.command_not_found = {|cmd|
-          let dir = ($nu.home-dir | path join ".cakemisc")
-          mkdir $dir
-          $"($cmd)\n" | save --append ($dir | path join "failed_commands.log")
-          null
-      }
-
-      # `--env` so the `cd` sticks after the command returns, the way the fish
-      # alias behaved.
-      def --env convene [] {
-          cd ($nu.home-dir | path join ".nixos" "universe")
-          ^git pull
-          ^nix flake update
-      }
-
-      # NOTE: the fish config aliased this to `convene && sacrifice`, but
-      # `sacrifice` was never defined anywhere in the repo, so the second half
-      # was dead. Only the `convene` part is carried over.
-      def --env ritual [] {
-          convene
-      }
-
       # `cargo doc` for direct dependencies only.
       def cargodoc [] {
           let direct = (
