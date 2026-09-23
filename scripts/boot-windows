@@ -1,13 +1,24 @@
-#!/usr/bin/env bash
+#!/usr/bin/env nu
 
-# Look up the boot number for Windows in the EFI records
-boot_number=$(echo $(efibootmgr) | grep -Po "(?<=Boot)\S{4}(?=( |\* )Windows)" | head -n1)
+# Set the next boot to Windows and reboot into it.
 
-# Check that Windows EFI entry was found
-if [ -z "$boot_number" ]; then
-    echo "Cannot find Windows boot in EFI, exiting"
-    exit 1
-fi
+def main [] {
+    # Look up the boot number for Windows in the EFI records.
+    let windows = (
+        ^efibootmgr
+        | lines
+        | parse --regex '^Boot(?<num>[0-9A-Fa-f]{4})\*?\s+(?<label>.*)$'
+        | where label =~ '^Windows'
+    )
 
-# Set next boot to be Windows and reboot the machine
-sudo efibootmgr -n "${boot_number}" && reboot
+    if ($windows | is-empty) {
+        print "Cannot find Windows boot in EFI, exiting"
+        exit 1
+    }
+
+    let boot_number = ($windows | first | get num)
+
+    # Set next boot to be Windows and reboot the machine.
+    ^sudo efibootmgr -n $boot_number
+    ^reboot
+}

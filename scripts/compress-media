@@ -1,0 +1,167 @@
+#!/usr/bin/env nu
+
+# Compress a video or image down to a target file size.
+#
+# -s/--size takes a size in MiB, or the literal string "zenity" to ask for it
+# with a GUI prompt. Everything else is treated as a file path.
+
+const AUDIO_BITRATE = 128_000 # 128k
+
+def l10n-init [] {
+    $env.TEXTDOMAIN = "ua.damglador.compress-media"
+    # If installed on the system the owner won't match the user, so it'll use
+    # /usr/share/locale instead.
+    let owner = (^stat -c %u $env.CURRENT_FILE | str trim | into int)
+    let uid = (^id -u | str trim | into int)
+    if ($owner == $uid and $uid != 0) {
+        let data_home = ($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")
+        $env.TEXTDOMAINDIR = $"($data_home)/locale"
+    }
+}
+
+def tr [msg: string]: nothing -> string {
+    ^gettext $msg | str trim --right --char "\n"
+}
+
+def show-error [title: string, msg: string] {
+    if (which zenity | is-not-empty) {
+        ^zenity --error --title $title --text $msg
+    } else {
+        print -e $"($title): ($msg)"
+    }
+}
+
+def main [
+    --size (-s): string # target size of the output file in MiB, or "zenity" to prompt
+    ...files: string    # files to compress
+] {
+    l10n-init
+
+    let title = (tr "Compress Media")
+
+    if ($files | is-empty) {
+        print "-s <size> | --size <size> - sets target size of output file in mb"
+        print "-h        | --help        - this message"
+        print "Everything else considered to be a file path"
+        return
+    }
+
+    let target_size_mb = (resolve-target-size $size $title)
+    if ($target_size_mb == null) { return }
+
+    for file in $files {
+        compress-one $file $target_size_mb $title
+    }
+}
+
+def resolve-target-size [size: any, title: string]: nothing -> any {
+    if ($size == null) {
+        return 10 # default target size in MiB
+    }
+
+    if ($size != "zenity") {
+        return ($size | into int)
+    }
+
+    if (which zenity | is-empty) {
+        print -e "zenity is not available to prompt for a size."
+        return null
+    }
+
+    let answer = (
+        do --ignore-errors {
+            ^zenity --entry --title $title --text (tr "Input target size for the file in MiB")
+        } | str trim
+    )
+
+    if ($answer | is-empty) { null } else { $answer | into int }
+}
+
+def compress-one [file: string, target_size_mb: int, title: string] {
+    let file_name = ($file | path basename)
+    let ext = ($file | path parse | get extension)
+    let stem = ($file | str replace --regex $"\\.($ext)$" "")
+    let mime = (^file -b --mime-type $file | str trim)
+
+    if ($mime | str starts-with "video/") {
+        compress-video $file $file_name $stem $ext $target_size_mb $title
+    } else if ($mime | str starts-with "image/") {
+        ^magick $file -define $"webp:extent=(($target_size_mb * 1024))KB" $"($stem)-($target_size_mb)MiB.webp"
+    } else {
+        show-error $title (tr "Unsupported file type")
+    }
+}
+
+def compress-video [
+    file: string
+    file_name: string
+    stem: string
+    ext: string
+    target_size_mb: int
+    title: string
+] {
+    let size = (ls -l $file | get 0.size | into int | $in / 1024 / 1024 | math floor)
+
+    if ($size > ($target_size_mb * 8)) {
+        let msg = (
+            tr "«${file_name}» is too big (${size}MiB) for the target size of ${target_size_mb}MiB.\nInput file must not be more than 8 times bigger than target size."
+            | str replace --all '${file_name}' $file_name
+            | str replace --all '${size}' ($size | into string)
+            | str replace --all '${target_size_mb}' ($target_size_mb | into string)
+        )
+        show-error $"($title): (tr 'File is too big!')" $msg
+        exit 1
+    }
+
+    let output = $"($stem)-($target_size_mb)MiB.($ext)"
+
+    if ($output | path exists) {
+        let msg = (tr "Output file already exists")
+        if (which zenity | is-not-empty) {
+            let keep_going = (
+                do --ignore-errors {
+                    ^zenity --question --title $title --text $msg --ok-label "Continue" --cancel-label "Cancel"
+                    true
+                }
+            )
+            if ($keep_going != true) { return }
+        } else {
+            print -e $"($title): ($msg)"
+            return
+        }
+    }
+
+    let target_size = $target_size_mb * 1024 * 1024 * 8 # target size in bits
+    let duration = (
+        ^ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $file
+        | str trim
+        | into float
+    )
+    let length = (($duration | math floor) + 1)
+    let total_bitrate = ($target_size // $length)
+    let video_bitrate = ($total_bitrate - $AUDIO_BITRATE)
+
+    let tmp = ($env.TMPDIR? | default "/tmp")
+    let passlog = $"($tmp)/ffmpeg2pass-($file_name)"
+
+    # -r sets output FPS.
+    # -vf "scale=-1:'min(1080,ih)'" rescales anything taller than 1080p.
+    let common = [
+        -vf "scale=-1:'min(1080,ih)'"
+        -r 60
+        -c:v libx264
+        -preset medium
+        -b:v ($video_bitrate | into string)
+        -passlogfile $passlog
+        -b:a ($AUDIO_BITRATE | into string)
+    ]
+
+    try {
+        ^ffmpeg -y -i $file ...$common -pass 1 -f $ext /dev/null
+        ^ffmpeg -y -i $file ...$common -pass 2 $output
+    } catch { |e|
+        print -e $"ffmpeg failed for ($file_name)"
+    }
+
+    glob $"($passlog)*" | each { |p| rm -f $p }
+}
