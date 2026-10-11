@@ -169,6 +169,14 @@ if [ "$TARGET" = "installer" ]; then
         -display sdl,gl=on
 else
     nix build "${NIX_BUILD_ARGS[@]}" .#nixosConfigurations.cakeos.config.system.build.vm
+
+    # The launcher is named after the guest's hostname (run-<hostname>-vm), which
+    # each preset sets differently, so find it rather than guess it.
+    RUN_VM=$(find -L result/bin -maxdepth 1 -name 'run-*-vm' | head -n 1)
+    if [ -z "$RUN_VM" ]; then
+        echo "No run-*-vm launcher in result/bin; the VM build did not produce one."
+        exit 1
+    fi
     echo "Running the VM for $TARGET with 8GB RAM and 4 cores..."
 
     # hecate renders with OpenGL ES on the DRM device. Plain `-vga virtio` has no
@@ -192,7 +200,7 @@ else
     USE_TMPDIR=1 \
     TMPDIR="$TEMP_DIR/vm-tmp" \
     QEMU_OPTS="-m 8192 -smp 4 $VM_GPU -display sdl,gl=on" \
-        ./result/bin/run-cakeos-vm
+        "./$RUN_VM"
 fi
 
 popd > /dev/null
