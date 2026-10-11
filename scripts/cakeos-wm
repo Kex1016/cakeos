@@ -39,8 +39,9 @@
 
 const FLAKE = "/etc/cakeos"
 const REPO = "https://github.com/Kex1016/cakeos.git"
-# TEMPORARY: the same branch update-cakeos tracks until it lands on main.
-const BRANCH = "modularity"
+# TEMPORARY: the same branch update-cakeos tracks until it lands on main
+# (hecate only exists on feat/hecate for now).
+const BRANCH = "feat/hecate"
 const BACKUP = "/var/lib/cakeos-wm/previous"
 const OVERRIDE = "gen/overrides/desktop.nix"
 const LOG = "/var/log/cakeos-wm.log"

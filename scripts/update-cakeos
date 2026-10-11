@@ -9,8 +9,9 @@ const REPO_URL = "git@github.com:Kex1016/cakeos.git"
 # Https method
 # const REPO_URL = "https://github.com/Kex1016/cakeos.git"
 
-# TEMPORARY: track the modularity branch until it lands on main.
-const BRANCH = "modularity"
+# TEMPORARY: track feat/hecate (modularity + the hecate desktop and cakeos-wm)
+# until it lands on main. Keep in step with cakeos-wm's BRANCH.
+const BRANCH = "feat/hecate"
 const TARGET_DIR = "/etc/cakeos"
 
 def main [] {
