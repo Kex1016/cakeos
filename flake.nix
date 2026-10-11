@@ -47,7 +47,7 @@
     # Points at feat/v1 until it is merged; drop the ref then.
     # Build against a local checkout instead with ./hecate-vm.sh.
     hecate = {
-      url = "github:Kex1016/wl-hex/feat/v1";
+      url = "github:Kex1016/wl-hex?ref=feat/v1";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         home-manager.follows = "home-manager";
