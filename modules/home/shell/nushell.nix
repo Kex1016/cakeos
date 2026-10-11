@@ -34,6 +34,17 @@
       rungame = "^gamescope --backend wayland -W 2560 -H 1080 -w 2560 -h 1080 --force-grab-cursor -r 200 --expose-wayland --";
     };
 
+    # `home.sessionPath` only reaches POSIX shells (hm-session-vars.sh), so put
+    # ~/.local/bin (the cakeos scripts) on nushell's PATH here.
+    extraEnv = ''
+      $env.PATH = (
+          $env.PATH
+          | split row (char esep)
+          | prepend "${config.home.homeDirectory}/.local/bin"
+          | uniq
+      )
+    '';
+
     extraConfig = ''
       # `cargo doc` for direct dependencies only.
       def cargodoc [] {
