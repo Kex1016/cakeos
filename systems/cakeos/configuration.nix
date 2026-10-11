@@ -23,7 +23,10 @@
     ../../modules/system/apps/vpn.nix
     ../../modules/system/apps/librepods.nix
     ../../modules/system/apps/tablet.nix
-  ];
+  ]
+  # `cakeos-wm` picks the desktop here, over gen/<genName>.nix's own choice, so
+  # it never has to edit the installer's file (whatever version wrote it).
+  ++ lib.optional (builtins.pathExists ../../gen/overrides/desktop.nix) ../../gen/overrides/desktop.nix;
 
   # The account name comes from the installer, so the home-manager user is
   # wired up here rather than in flake.nix, where `config` is not in scope.

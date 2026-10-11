@@ -120,6 +120,29 @@
       # The installer reads this to build its desktop menu.
       cakeosDesktops = desktops;
 
+      # The desktop switcher, runnable on any CakeOS install, however old:
+      #   nix run 'github:Kex1016/cakeos?ref=<branch>#cakeos-wm' -- --branch <branch>
+      packages.${system}.cakeos-wm =
+        pkgs.runCommand "cakeos-wm"
+          {
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            meta.mainProgram = "cakeos-wm";
+          }
+          ''
+            install -Dm755 ${./scripts/cakeos-wm} $out/libexec/cakeos-wm
+            substituteInPlace $out/libexec/cakeos-wm \
+              --replace-fail "#!/usr/bin/env nu" "#!${pkgs.nushell}/bin/nu"
+            makeWrapper $out/libexec/cakeos-wm $out/bin/cakeos-wm \
+              --prefix PATH : ${
+                lib.makeBinPath [
+                  pkgs.git
+                  pkgs.rsync
+                  pkgs.dconf
+                  pkgs.dbus
+                ]
+              }
+          '';
+
       nixosConfigurations = {
         cakeos = mkHost "cakeos";
 

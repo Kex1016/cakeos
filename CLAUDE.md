@@ -203,18 +203,28 @@ build/install-time tooling that must run before nushell is on the target.
   the upstream GitHub repo via a temp clone + rsync, explicitly preserving `gen/` and never
   leaving a `.git` dir in `/etc/cakeos` (a `.git` there would make Nix treat `gen/` as untracked
   and ignore it under flakes' git-tracked-files-only semantics).
-- `scripts/cakeos-wm` — switches an installed machine to another desktop. Sets
-  `cakeos.desktop` in `gen/<config>.nix` (keeping `<config>.nix.pre-wm`) and builds as the user
-  with the session still up; then `sudo systemd-run`s itself (unit `cakeos-wm-switch`, log in
-  `/var/log/cakeos-wm.log`) because the rest outlives the session: stop the display manager,
-  terminate the user's graphical sessions, stash the old desktop's `state.nix` paths into
-  `~/.local/state/cakeos/desktops/<de>/` (dconf dirs dumped then reset, on a private
-  `dbus-run-session`), `nix-env --set` + `switch-to-configuration switch`, restore the new
-  desktop's stash, start the display manager. NixOS-owned files (symlinks into `/nix/store`)
-  are never moved, and a stashed file whose path Home Manager now manages stays in the stash.
-  Whatever already sits where a file is restored goes to `desktops/.displaced/<time>/`. A
-  failed activation rolls the profile and `gen/` back and restores the old desktop.
-  `cakeos-wm stash|restore <de> [--dry-run]` run just those halves.
+- `scripts/cakeos-wm` — switches an installed machine to another desktop, from any CakeOS
+  version: it is also the flake package `cakeos-wm`, so an old install can
+  `nix run 'github:Kex1016/cakeos?ref=<branch>#cakeos-wm' -- --branch <branch>`. It clones the
+  latest `--branch` (default: the one `update-cakeos` tracks; `--no-update` keeps the installed
+  one) into a staging dir, copies `/etc/cakeos/gen/` in, writes
+  `gen/overrides/desktop.nix` (`cakeos.desktop = lib.mkForce "<de>"`, imported by
+  `systems/cakeos/configuration.nix` when present, so the installer's `gen/<config>.nix` is
+  never edited) and builds as the user with the session still up. It checks the built system's
+  `/etc/cakeos/desktop` really is the target (a branch without the override import would
+  silently build the old desktop), then rsyncs the staging dir into `/etc/cakeos` (old copy in
+  `/var/lib/cakeos-wm/previous`, `gen/` untouched apart from the override) and
+  `sudo systemd-run`s itself (unit `cakeos-wm-switch`, log in `/var/log/cakeos-wm.log`) because
+  the rest outlives the session: stop the display manager, terminate the user's graphical
+  sessions, stash the old desktop's `state.nix` paths into `~/.local/state/cakeos/desktops/<de>/`
+  (dconf dirs dumped then reset, on a private `dbus-run-session`), `nix-env --set` +
+  `switch-to-configuration switch`, restore the new desktop's stash, start the display manager.
+  NixOS-owned files (symlinks into `/nix/store`) are never moved, and a stashed file whose path
+  Home Manager now manages stays in the stash. Whatever already sits where a file is restored
+  goes to `desktops/.displaced/<time>/`. A failed activation puts back the old system,
+  `/etc/cakeos` and the old desktop's stash. Tools an old system may lack (git, rsync, dconf)
+  come from nixpkgs on demand. `cakeos-wm stash|restore <de> [--dry-run]` run just those
+  halves.
 - `scripts/hello-cakeos`, `scripts/boot-windows` (EFI boot-to-Windows helper),
   `scripts/compress-media` (ffmpeg/ImageMagick "shrink to N MiB", zenity dialogs),
   `scripts/prism-tmp-wrapper` (stages a Prism Launcher Minecraft instance into `/tmp` for
