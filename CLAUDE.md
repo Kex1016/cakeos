@@ -106,6 +106,10 @@ Each `modules/desktops/<de>/` provides:
 - `home.nix` — imports the home-manager pieces for this desktop
 - `groups.nix` — desktop-specific additions per package group
 - `meta.nix` — `{ description = "..."; }`, the blurb shown in the installer menu
+- `state.nix` (optional) — `{ paths = [ ... ]; dconf = [ ... ]; }`: what the desktop writes at
+  runtime (`$HOME`-relative files/dirs, globs allowed, and dconf directories). `cakeos-wm`
+  stashes it when switching away and restores it on return. `modules/desktops/state.nix`
+  collects them as plain Nix so the script can `nix eval --file` it
 
 `hecate/` is the exception to "DE packages from nixpkgs": it comes from the `hecate` flake
 input (Kex1016/wl-hex, private, hence `git+https` so git's credentials are used). Its
@@ -199,6 +203,18 @@ build/install-time tooling that must run before nushell is on the target.
   the upstream GitHub repo via a temp clone + rsync, explicitly preserving `gen/` and never
   leaving a `.git` dir in `/etc/cakeos` (a `.git` there would make Nix treat `gen/` as untracked
   and ignore it under flakes' git-tracked-files-only semantics).
+- `scripts/cakeos-wm` — switches an installed machine to another desktop. Sets
+  `cakeos.desktop` in `gen/<config>.nix` (keeping `<config>.nix.pre-wm`) and builds as the user
+  with the session still up; then `sudo systemd-run`s itself (unit `cakeos-wm-switch`, log in
+  `/var/log/cakeos-wm.log`) because the rest outlives the session: stop the display manager,
+  terminate the user's graphical sessions, stash the old desktop's `state.nix` paths into
+  `~/.local/state/cakeos/desktops/<de>/` (dconf dirs dumped then reset, on a private
+  `dbus-run-session`), `nix-env --set` + `switch-to-configuration switch`, restore the new
+  desktop's stash, start the display manager. NixOS-owned files (symlinks into `/nix/store`)
+  are never moved, and a stashed file whose path Home Manager now manages stays in the stash.
+  Whatever already sits where a file is restored goes to `desktops/.displaced/<time>/`. A
+  failed activation rolls the profile and `gen/` back and restores the old desktop.
+  `cakeos-wm stash|restore <de> [--dry-run]` run just those halves.
 - `scripts/hello-cakeos`, `scripts/boot-windows` (EFI boot-to-Windows helper),
   `scripts/compress-media` (ffmpeg/ImageMagick "shrink to N MiB", zenity dialogs),
   `scripts/prism-tmp-wrapper` (stages a Prism Launcher Minecraft instance into `/tmp` for
@@ -217,6 +233,8 @@ release tagged either with a supplied tag or a timestamp.
    Gate `system.nix` on `config.cakeos.desktop == "<name>"` and the home-side files on
    `osConfig.cakeos.desktop == "<name>"`.
 3. Add `gen-presets/<name>.nix` so `./build-vm.sh <name>` can boot it.
+4. Add `state.nix` listing what it writes at runtime, so `cakeos-wm` can switch away from it
+   and back cleanly.
 
 Nothing else changes: the option enum, the module imports and the installer menu all derive from
 `modules/desktops/list.nix`.

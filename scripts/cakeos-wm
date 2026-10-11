@@ -1,0 +1,418 @@
+#!/usr/bin/env nu
+
+# CakeOS desktop switcher.
+#
+# Switches the installed system to another desktop (anything in
+# modules/desktops/) without reinstalling, and keeps each desktop's runtime
+# state apart so going back and forth is painless.
+#
+#   cakeos-wm                 pick a desktop from a menu
+#   cakeos-wm list            show the desktops and which one is running
+#   cakeos-wm switch <name>   switch to <name>
+#   cakeos-wm log             show the log of the last switch
+#
+# What a switch does:
+#   1. Sets `cakeos.desktop` in gen/<config>.nix and builds the new system as
+#      you, while your session is still up. A failed build changes nothing.
+#   2. Hands over to a root service (systemd-run), since the rest outlives your
+#      session: it ends the graphical session and stops the display manager.
+#   3. Stashes the old desktop's state into
+#      ~/.local/state/cakeos/desktops/<desktop>/: the files and folders listed
+#      in modules/desktops/<desktop>/state.nix and its dconf directories
+#      (dumped, then reset). Anything Home Manager manages (a symlink into
+#      /nix/store) stays where it is: NixOS owns it.
+#   4. Activates the new system (Home Manager included).
+#   5. Restores the new desktop's stash, if it has one, and starts the display
+#      manager again.
+# If activation fails, the old desktop's stash and gen/ file are put back.
+
+const FLAKE = "/etc/cakeos"
+const LOG = "/var/log/cakeos-wm.log"
+const UNIT = "cakeos-wm-switch"
+
+def flake [] { $env.CAKEOS_FLAKE? | default $FLAKE }
+
+def state-root [] { $"($env.HOME)/.local/state/cakeos/desktops" }
+
+# --- reading the flake ----------------------------------------------------
+
+def desktops [] {
+    let dir = $"(flake)/modules/desktops"
+    ^nix eval --impure --json --expr $"
+        let
+          dir = ($dir);
+        in
+        builtins.map \(d: {
+          name = d;
+          description = \(import \(dir + \"/${d}/meta.nix\")).description;
+        }) \(import \(dir + \"/list.nix\"))
+    " | from json
+}
+
+def desktop-state [] {
+    ^nix eval --json --file $"(flake)/modules/desktops/state.nix" | from json
+}
+
+# gen/<config>.nix, the machine's identity and install-time choices.
+def gen-file [] {
+    let files = (
+        glob $"(flake)/gen/*.nix"
+        | where { |p| not ($p | path basename | str ends-with "-hardware.nix") }
+    )
+    if ($files | is-empty) {
+        error make { msg: $"no gen/<config>.nix in (flake); is this an installed CakeOS?" }
+    }
+    $files | first
+}
+
+def gen-desktop [file: string] {
+    let found = (open --raw $file | parse --regex '(?m)^\s*desktop\s*=\s*"(?<d>[^"]+)"\s*;')
+    if ($found | length) != 1 {
+        error make { msg: $"expected exactly one `desktop = \"...\";` in ($file)" }
+    }
+    $found.0.d
+}
+
+# The desktop that is actually running (gen/ may already say otherwise).
+def running-desktop [] {
+    let f = "/run/current-system/etc/cakeos/desktop"
+    if ($f | path exists) { open --raw $f | str trim } else { gen-desktop (gen-file) }
+}
+
+# --- moving files ---------------------------------------------------------
+
+def kind [p: string] {
+    # `path type` doesn't follow symlinks, so a dangling one still counts.
+    try { $p | path type } catch { "" } | default ""
+}
+
+def is-store-link [p: string] {
+    (kind $p) == "symlink" and ((^readlink $p) | str starts-with "/nix/store/")
+}
+
+def has-store-links [dir: string] {
+    (^find $dir -lname "/nix/store/*" -print -quit | str trim) != ""
+}
+
+def children [dir: string] {
+    ls -a --full-paths $dir | get name
+}
+
+# Move src to dst. Whatever is already at dst goes to `displaced` first.
+def place [src: string, dst: string, displaced: string, home: string] {
+    if (kind $dst) != "" {
+        let aside = ($displaced | path join ($dst | path relative-to $home))
+        mkdir ($aside | path dirname)
+        ^mv $dst $aside
+        print $"   displaced ($dst) -> ($aside)"
+    }
+    mkdir ($dst | path dirname)
+    ^mv $src $dst
+}
+
+# Move what's at src (under $HOME) into dst, leaving Home Manager's links.
+def stash-path [src: string, dst: string, displaced: string, home: string, dry: bool] {
+    let k = (kind $src)
+    if $k == "" or (is-store-link $src) { return }
+    if $k == "dir" and (has-store-links $src) {
+        # A directory Home Manager links into: take only what it doesn't own.
+        for c in (children $src) {
+            stash-path $c ($dst | path join ($c | path basename)) $displaced $home $dry
+        }
+        return
+    }
+    print $"   ($src | path relative-to $home)"
+    if not $dry { place $src $dst $displaced $home }
+}
+
+# Put src (in the stash) back at dst. Home Manager's links win over the stash.
+def restore-path [src: string, dst: string, displaced: string, home: string] {
+    let k = (kind $src)
+    let d = (kind $dst)
+    if (is-store-link $dst) {
+        print $"   kept in the stash, NixOS manages it now: ($dst | path relative-to $home)"
+        return
+    }
+    if $k == "dir" and $d == "dir" {
+        for c in (children $src) {
+            restore-path $c ($dst | path join ($c | path basename)) $displaced $home
+        }
+        return
+    }
+    print $"   ($dst | path relative-to $home)"
+    place $src $dst $displaced $home
+}
+
+def expand [home: string, pattern: string] {
+    let full = ($home | path join $pattern)
+    if ($pattern | str contains "*") { glob $full } else { [$full] }
+}
+
+def dconf-file [dir: string] { $"($dir | str replace --all '/' '%').ini" }
+
+def dconf-dir [file: string] { $file | path basename | str replace --regex '\.ini$' "" | str replace --all '%' '/' }
+
+def dconf-bin [] { $env.CAKEOS_WM_DCONF? | default "dconf" }
+
+def has-dconf [] { (which (dconf-bin) | is-not-empty) or ((dconf-bin) | path exists) }
+
+# --- stash / restore (run as the desktop's user) ---------------------------
+
+# Move a desktop's runtime state out of the way (used by `switch`).
+def "main stash" [
+    desktop: string
+    --dry-run # only list what would move
+] {
+    let home = $env.HOME
+    let state = (desktop-state | get $desktop)
+    let root = ((state-root) | path join $desktop)
+    let displaced = ((state-root) | path join ".displaced" (date now | format date "%Y%m%d-%H%M%S"))
+    print $"==> Stashing ($desktop) into ($root)"
+    for pattern in $state.paths {
+        for src in (expand $home $pattern) {
+            let rel = ($src | path relative-to $home)
+            stash-path $src ($root | path join "home" $rel) $displaced $home $dry_run
+        }
+    }
+    if not (has-dconf) {
+        print "   (no dconf, skipping its settings)"
+        return
+    }
+    for dir in $state.dconf {
+        let dump = (run-external (dconf-bin) dump $dir)
+        if ($dump | str trim) == "" { continue }
+        print $"   dconf ($dir)"
+        if $dry_run { continue }
+        mkdir ($root | path join "dconf")
+        $dump | save --force ($root | path join "dconf" (dconf-file $dir))
+        run-external (dconf-bin) "reset" "-f" $dir
+    }
+}
+
+# Bring a desktop's stashed state back (used by `switch`).
+def "main restore" [desktop: string] {
+    let home = $env.HOME
+    let root = ((state-root) | path join $desktop)
+    if not ($root | path exists) {
+        print $"==> Nothing stashed for ($desktop) yet, starting fresh"
+        return
+    }
+    let displaced = ((state-root) | path join ".displaced" (date now | format date "%Y%m%d-%H%M%S"))
+    print $"==> Restoring ($desktop) from ($root)"
+    let files = ($root | path join "home")
+    if ($files | path exists) {
+        for c in (children $files) {
+            restore-path $c ($home | path join ($c | path relative-to $files)) $displaced $home
+        }
+    }
+    let dconf = ($root | path join "dconf")
+    if ($dconf | path exists) and (has-dconf) {
+        for f in (glob $"($dconf)/*.ini") {
+            let dir = (dconf-dir $f)
+            print $"   dconf ($dir)"
+            open --raw $f | run-external (dconf-bin) load $dir
+            rm $f
+        }
+    }
+    # Whatever is left was kept on purpose (see above); drop the empty shell.
+    ^find $root -depth -type d -empty -delete
+}
+
+# --- switching ------------------------------------------------------------
+
+def "main list" [] {
+    let running = (running-desktop)
+    let chosen = (gen-desktop (gen-file))
+    desktops | each { |d|
+        let mark = if $d.name == $running { "running" } else if $d.name == $chosen { "selected" } else { "" }
+        { desktop: $d.name, state: $mark, description: $d.description }
+    }
+}
+
+def "main log" [] {
+    if ($LOG | path exists) { open --raw $LOG } else { print "No switch has been logged yet." }
+}
+
+# Switch to another desktop.
+def "main switch" [
+    target: string # a desktop from `cakeos-wm list`
+    --yes (-y) # don't ask before ending the session
+] {
+    if ((^id -u | into int) == 0) {
+        error make { msg: "run this as your user, not root: it sudo's for the parts that need it" }
+    }
+    let names = (desktops | get name)
+    if $target not-in $names {
+        error make { msg: $"unknown desktop `($target)`; one of: ($names | str join ', ')" }
+    }
+    let from = (running-desktop)
+    if $target == $from {
+        print $"==> ($target) is already running."
+        return
+    }
+    let gen = (gen-file)
+    let config = ($gen | path basename | str replace --regex '\.nix$' "")
+
+    # Tools the root service needs, resolved now so they outlive the switch.
+    let dconf = if (which dconf | is-not-empty) {
+        ^realpath (which dconf | first | get path) | str trim
+    } else {
+        $"(^nix build --no-link --print-out-paths nixpkgs#dconf | lines | last)/bin/dconf"
+    }
+    let dbus_run = (^realpath (which dbus-run-session | first | get path) | str trim)
+
+    print $"==> Switching ($from) -> ($target) \(config `($config)`\)"
+    print $"==> Setting cakeos.desktop in ($gen)"
+    let edited = (open --raw $gen | str replace --regex '(?m)^(\s*desktop\s*=\s*)"[^"]+"(\s*;)' $"${1}\"($target)\"${2}")
+    let tmp = (^mktemp | str trim)
+    $edited | save --force $tmp
+    ^sudo cp $gen $"($gen).pre-wm"
+    ^sudo cp $tmp $gen
+    rm $tmp
+
+    let out = ((state-root) | path join ".system")
+    mkdir (state-root)
+    print "==> Building the new system (your session stays up meanwhile)..."
+    let built = (^nix build $"path:(flake)#nixosConfigurations.($config).config.system.build.toplevel" --out-link $out --print-out-paths | complete)
+    if $built.exit_code != 0 {
+        print $built.stderr
+        print $"!!! Build failed; putting ($gen) back."
+        ^sudo cp $"($gen).pre-wm" $gen
+        exit 1
+    }
+    let system = ($built.stdout | lines | last)
+
+    if not $yes {
+        print ""
+        print $"==> Built. Switching now ends your graphical session \(save your work\)."
+        print $"    ($from)'s settings get stashed, ($target)'s come back if you used it before."
+        let answer = (input "    Continue? [y/N]: ")
+        if $answer !~ '(?i)^y' {
+            print $"==> Cancelled; putting ($gen) back."
+            ^sudo cp $"($gen).pre-wm" $gen
+            return
+        }
+    }
+
+    let script = ($env.CURRENT_FILE | path expand)
+    print $"==> Handing over to root \(follow along with `journalctl -fu ($UNIT)`, or `cakeos-wm log` afterwards\)."
+    let user = (^id -un | str trim)
+    (^sudo systemd-run $"--unit=($UNIT)" --collect --quiet
+        "--setenv=PATH=/run/wrappers/bin:/run/current-system/sw/bin"
+        $"--setenv=CAKEOS_FLAKE=(flake)"
+        $nu.current-exe $script "apply"
+        "--user" $user "--from" $from "--to" $target
+        "--system" $system "--gen" $gen
+        "--dconf" $dconf "--dbus-run" $dbus_run)
+}
+
+# Run a subcommand of this script as the user, on a private D-Bus for dconf.
+def as-user [user: string, dconf: string, dbus_run: string, ...args: string] {
+    let home = (^getent passwd $user | split row ":" | get 5)
+    let script = ($env.CURRENT_FILE | path expand)
+    # The private bus starts dconf's service on demand; it finds it here.
+    let share = ($dconf | path dirname | path dirname | path join "share")
+    (^runuser -u $user -- env $"HOME=($home)" $"XDG_DATA_DIRS=($share)"
+        $"CAKEOS_WM_DCONF=($dconf)" $"CAKEOS_FLAKE=(flake)"
+        $dbus_run "--" $nu.current-exe $script ...$args)
+}
+
+def graphical-sessions [user: string] {
+    ^loginctl list-sessions --no-legend
+    | lines
+    | each { |l| $l | str trim | split row --regex '\s+' }
+    | where { |cols| ($cols | length) > 2 and $cols.2 == $user }
+    | each { |cols| $cols.0 }
+    | where { |id|
+        (^loginctl show-session $id -p Type --value | str trim) in [wayland x11 mir]
+    }
+}
+
+def log [msg: string] {
+    print $msg
+    $"($msg)\n" | save --append $LOG
+}
+
+# Internal: the root half of `switch`, run by systemd-run.
+def "main apply" [
+    --user: string
+    --from: string
+    --to: string
+    --system: string
+    --gen: string
+    --dconf: string
+    --dbus-run: string
+] {
+    $"\n=== (date now | format date '%F %T') switching ($from) -> ($to)\n" | save --append $LOG
+    let profile = "/nix/var/nix/profiles/system"
+    let old_system = (^readlink -f /run/current-system | str trim)
+
+    let switched = try {
+        log "==> Ending the graphical session"
+        # Stopped, it stays stopped through activation (NixOS doesn't restart
+        # the display manager on switch), so no login starts before the restore.
+        ^systemctl stop display-manager.service
+        for id in (graphical-sessions $user) { do -i { ^loginctl terminate-session $id } }
+        for i in 1..30 {
+            if (graphical-sessions $user | is-empty) { break }
+            sleep 1sec
+        }
+        do -i { ^systemctl --user $"--machine=($user)@.host" stop graphical-session.target }
+        sleep 2sec
+
+        let stash = (as-user $user $dconf $dbus_run stash $from | complete)
+        log $stash.stdout
+        if $stash.exit_code != 0 { error make { msg: $"stashing ($from) failed: ($stash.stderr)" } }
+
+        log $"==> Activating ($system)"
+        ^nix-env -p $profile --set $system
+        let act = (^$"($system)/bin/switch-to-configuration" switch | complete)
+        log $act.stdout
+        log $act.stderr
+        # 4 means "switched, but some unit failed to start"; anything else
+        # means it didn't switch.
+        if $act.exit_code not-in [0 4] {
+            error make { msg: $"switch-to-configuration exited ($act.exit_code)" }
+        }
+        true
+    } catch { |e|
+        log $"!!! ($e.msg)"
+        log $"!!! Rolling back to ($from)."
+        ^cp $gen $"($gen).failed-wm"
+        ^cp $"($gen).pre-wm" $gen
+        if (^readlink -f $profile | str trim) == $system {
+            do -i { ^nix-env -p $profile --set $old_system }
+        }
+        if (^readlink -f /run/current-system | str trim) != $old_system {
+            do -i { ^$"($old_system)/bin/switch-to-configuration" switch }
+        }
+        false
+    }
+
+    # Whichever desktop is now installed gets its state back.
+    let back = if $switched { $to } else { $from }
+    let restored = (do -i { as-user $user $dconf $dbus_run restore $back | complete })
+    if $restored != null {
+        log $restored.stdout
+        if $restored.exit_code != 0 { log $"!!! restoring ($back) failed: ($restored.stderr)" }
+    }
+
+    do -i { rm $"(^getent passwd $user | split row ':' | get 5)/.local/state/cakeos/desktops/.system" }
+    log "==> Starting the display manager"
+    ^systemctl start display-manager.service
+    log (if $switched { $"=== Done: ($to) is running." } else { $"=== Switch failed, still on ($from)." })
+}
+
+# Pick a desktop from a menu.
+def main [] {
+    let running = (running-desktop)
+    let choices = (desktops | where name != $running)
+    if ($choices | is-empty) {
+        print "Only one desktop is available."
+        return
+    }
+    print $"Running: ($running)"
+    let pick = ($choices | each { |d| $"($d.name)  —  ($d.description)" } | input list "Switch to:")
+    if ($pick | is-empty) { return }
+    main switch ($pick | split row "  —  " | first)
+}
