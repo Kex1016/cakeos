@@ -49,6 +49,13 @@ KEEP_DISK=1 ./build-installer.sh empty   # boots that persistent disk (post-inst
 ./build-vm.sh installer   # default
 ./build-vm.sh gnome       # any name in gen-presets/ = a desktop preset
 ./build-vm.sh plasma
+./build-vm.sh hecate      # boots with virtio-vga-gl (virgl), since hecate renders with GLES
+
+# Boot the hecate desktop built from a local wl-hex checkout, uncommitted changes
+# included (copies it into the temp workspace, minus target/ and .git, and passes
+# --override-input hecate path:...). Defaults to ../wl-hex.
+./hecate-vm.sh [path/to/wl-hex]
+# Same thing for any preset: HECATE_SRC=/path/to/wl-hex ./build-vm.sh <preset>
 
 # Format nix files (repo uses nixfmt-style formatting; check before assuming a formatter is wired in)
 nixfmt <file>.nix
@@ -99,6 +106,11 @@ Each `modules/desktops/<de>/` provides:
 - `home.nix` — imports the home-manager pieces for this desktop
 - `groups.nix` — desktop-specific additions per package group
 - `meta.nix` — `{ description = "..."; }`, the blurb shown in the installer menu
+
+`hecate/` is the exception to "DE packages from nixpkgs": it comes from the `hecate` flake
+input (Kex1016/wl-hex, private, hence `git+https` so git's credentials are used). Its
+`system.nix` and `home.nix` import that flake's NixOS and Home Manager modules unconditionally
+(they only declare options) and enable them under the usual gate.
 
 Every one of those gates itself on `config.cakeos.desktop` (home-manager modules use
 `osConfig.cakeos.desktop`), so all desktops are imported unconditionally and only the selected

@@ -84,6 +84,21 @@ if [ "$TARGET" != "installer" ]; then
     cp "$CURRENT_DIR/gen-presets/cakeos-hardware.nix" "$TEMP_DIR/gen/cakeos-hardware.nix"
 fi
 
+# HECATE_SRC=/path/to/wl-hex builds against a local hecate checkout instead of
+# the pinned flake input (see hecate-vm.sh). Copied like the flake itself, so
+# uncommitted changes are included, minus build output Nix would otherwise copy.
+NIX_BUILD_ARGS=()
+if [ -n "${HECATE_SRC:-}" ]; then
+    if [ ! -f "$HECATE_SRC/flake.nix" ]; then
+        echo "HECATE_SRC=$HECATE_SRC has no flake.nix; point it at a wl-hex checkout."
+        exit 1
+    fi
+    echo "Using local hecate from $HECATE_SRC..."
+    with_tool rsync rsync -a --exclude=".git" --exclude="target" --exclude="result*" \
+        --exclude=".direnv" --exclude="*.qcow2" "$HECATE_SRC/" "$TEMP_DIR/hecate-src/"
+    NIX_BUILD_ARGS+=( --override-input hecate "path:$TEMP_DIR/hecate-src" )
+fi
+
 echo "Building the NixOS configuration: $TARGET..."
 
 # Run build in temp dir
@@ -153,8 +168,16 @@ if [ "$TARGET" = "installer" ]; then
         -vga virtio \
         -display sdl,gl=on
 else
-    nix build .#nixosConfigurations.cakeos.config.system.build.vm
+    nix build "${NIX_BUILD_ARGS[@]}" .#nixosConfigurations.cakeos.config.system.build.vm
     echo "Running the VM for $TARGET with 8GB RAM and 4 cores..."
+
+    # hecate renders with OpenGL ES on the DRM device. Plain `-vga virtio` has no
+    # 3D, which leaves it on Mesa's software rasteriser; virtio-vga-gl (virgl)
+    # gives it the host GPU through the SDL window's GL context.
+    VM_GPU="-vga virtio"
+    if [ "$TARGET" = "hecate" ]; then
+        VM_GPU="-vga none -device virtio-vga-gl"
+    fi
 
     # Keep every scratch file the VM produces inside $TEMP_DIR so the trap
     # above disposes of it.
@@ -168,7 +191,7 @@ else
     NIX_DISK_IMAGE="$TEMP_DIR/cakeos-$TARGET.qcow2" \
     USE_TMPDIR=1 \
     TMPDIR="$TEMP_DIR/vm-tmp" \
-    QEMU_OPTS="-m 8192 -smp 4 -vga virtio -display sdl,gl=on" \
+    QEMU_OPTS="-m 8192 -smp 4 $VM_GPU -display sdl,gl=on" \
         ./result/bin/run-cakeos-vm
 fi
 
