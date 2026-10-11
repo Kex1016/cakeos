@@ -141,6 +141,10 @@
     "nix-command"
     "flakes"
   ];
+  
+  nix.extraOptions = ''
+    !include /etc/nix/access-tokens.conf
+  '';
 
   services.avahi = {
     enable = true;
