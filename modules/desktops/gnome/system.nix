@@ -49,45 +49,12 @@ lib.mkIf (config.cakeos.desktop == "gnome") {
   programs.seahorse.enable = true;
   programs.gnome-disks.enable = true;
 
-  # Hand-picked replacement for `services.gnome.core-apps`.
+  # Hand-picked replacement for `services.gnome.core-apps` (apps.nix), plus
+  # the GNOME-only bits.
   environment.systemPackages =
-    with pkgs;
-    [
-      nautilus
-      gnome-text-editor
-      gnome-calculator
-      gnome-characters
-      gnome-clocks
-      gnome-disk-utility
-      gnome-system-monitor
-      gnome-logs
-      gnome-software
-      gnome-connections
-      gnome-font-viewer
-      gnome-weather
-      gnome-calendar
-      gnome-contacts
-      simple-scan
-      baobab
-      seahorse
-      resources
-      loupe
-      papers
-      showtime
-      decibels
-      snapshot
-      file-roller
-      drawing
-      eyedropper
-      impression
-      meld
-      switcheroo
-      warp
-      dconf-editor
+    import ./apps.nix pkgs
+    ++ (with pkgs; [
       gnome-tweaks
-      refine
-      hardinfo2
-      wayland-utils
 
       adwaita-icon-theme
       adwaita-fonts
@@ -101,7 +68,7 @@ lib.mkIf (config.cakeos.desktop == "gnome") {
       qgnomeplatform-qt6
 
       # Extensions are installed here and enabled from dconf in home.nix.
-    ]
+    ])
     ++ (with pkgs.gnomeExtensions; [
       appindicator
       blur-my-shell

@@ -34,28 +34,30 @@
       };
       libinput.enable = true;
       gvfs.enable = true;
+      # Calendar and Contacts' data server, Nautilus' spacebar preview.
+      gnome = {
+        evolution-data-server.enable = true;
+        sushi.enable = true;
+      };
     };
 
-    # Everyday apps the shell launches or expects: file manager, terminal,
-    # viewers. Roughly the Plasma set, since the shell is Qt as well.
+    # The GNOME desktop's GTK app set (Nautilus, Loupe, Papers, Text Editor, ...),
+    # themed from the wallpaper by the shell (adw-gtk3 + matugen's gtk.css).
     environment.systemPackages =
-      with pkgs;
-      [
+      import ../gnome/apps.nix pkgs
+      ++ (with pkgs; [
         kitty
         foot
-        wayland-utils
         wl-clipboard
-        hardinfo2
-      ]
-      ++ (with pkgs.kdePackages; [
-        dolphin
-        ark
-        gwenview
-        okular
-        kate
-        kcalc
-        qtsvg
-        kio-extras
+        adwaita-icon-theme
       ]);
+
+    # What those apps lean on outside GNOME: Seahorse and Disks' system bits,
+    # gsettings (the shell sets the GTK theme and icons through it).
+    programs = {
+      dconf.enable = true;
+      seahorse.enable = true;
+      gnome-disks.enable = true;
+    };
   };
 }

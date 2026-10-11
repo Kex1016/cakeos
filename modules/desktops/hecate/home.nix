@@ -39,26 +39,15 @@
       VISUAL = "nvim";
     };
 
-    # The shell's own look is Material You from the wallpaper; line GTK apps
-    # up with its dark default.
-    gtk = {
-      enable = true;
-      theme = {
-        name = "adw-gtk3-dark";
-        package = pkgs.adw-gtk3;
-      };
-      iconTheme = {
-        name = "breeze-dark";
-        package = pkgs.kdePackages.breeze-icons;
-      };
-    };
+    # GTK, Qt and icon theming come from the shell, recoloured from the
+    # wallpaper (wl-hex docs/nix.md, "Theming from the wallpaper"). Home
+    # Manager's `gtk` module would fight it over gtk.css, so it stays off.
 
     home.pointerCursor = {
       enable = true;
       name = "Bibata-Modern-Classic";
       package = pkgs.bibata-cursors;
       size = 24;
-      gtk.enable = true;
       x11.enable = true;
     };
   };

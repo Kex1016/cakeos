@@ -110,7 +110,11 @@ Each `modules/desktops/<de>/` provides:
 `hecate/` is the exception to "DE packages from nixpkgs": it comes from the `hecate` flake
 input (Kex1016/wl-hex, private, hence `git+https` so git's credentials are used). Its
 `system.nix` and `home.nix` import that flake's NixOS and Home Manager modules unconditionally
-(they only declare options) and enable them under the usual gate.
+(they only declare options) and enable them under the usual gate. It borrows GNOME's GTK app
+set (`modules/desktops/gnome/apps.nix`, a plain `pkgs: [ ... ]` list both import) and GNOME's
+`mime.nix`, which gates on either desktop. GTK/Qt/icon theming is left to the bundled shell,
+which recolours them from the wallpaper, so `hecate/home.nix` must not enable Home Manager's
+`gtk` module (it would fight the shell over `gtk.css`).
 
 Every one of those gates itself on `config.cakeos.desktop` (home-manager modules use
 `osConfig.cakeos.desktop`), so all desktops are imported unconditionally and only the selected

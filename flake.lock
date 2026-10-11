@@ -303,10 +303,10 @@
         ]
       },
       "locked": {
-        "lastModified": 1791743868,
-        "narHash": "sha256-CnvJUjgB9sZj1LTlE0qHlsG51W+4m6F1cpLDL+PnwYA=",
+        "lastModified": 1791757897,
+        "narHash": "sha256-siKVEXvts840h6HHKPgB6IdzyAuY0O8kPUncNsyy67A=",
         "ref": "feat/v1",
-        "rev": "1219bc6559f2a9c1b5184f8fef0cd3b91c6bea9f",
+        "rev": "dc9e0bb87e331662bf67cbf094f4b94ed9b8147a",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/Kex1016/wl-hex"

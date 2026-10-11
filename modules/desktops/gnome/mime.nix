@@ -117,12 +117,18 @@ let
     };
 in
 
-lib.mkIf (osConfig.cakeos.desktop == "gnome") {
-  # Replaces the hand-edited ~/.config/mimeapps.list. KDE handlers (kwrite,
-  # gwenview, okular, ark, dolphin) are swapped for their GNOME counterparts.
-  xdg.mimeApps = {
-    enable = true;
-    defaultApplications = associations;
-    associations.added = associations;
-  };
-}
+# hecate uses the same GTK apps (modules/desktops/hecate/system.nix).
+lib.mkIf
+  (builtins.elem osConfig.cakeos.desktop [
+    "gnome"
+    "hecate"
+  ])
+  {
+    # Replaces the hand-edited ~/.config/mimeapps.list. KDE handlers (kwrite,
+    # gwenview, okular, ark, dolphin) are swapped for their GNOME counterparts.
+    xdg.mimeApps = {
+      enable = true;
+      defaultApplications = associations;
+      associations.added = associations;
+    };
+  }
