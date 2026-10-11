@@ -60,6 +60,14 @@
     "flakes"
   ];
 
+  # Only for `system.build.vm` (build-vm.sh), never a real install. Sized here
+  # rather than with QEMU's -m: the virtiofs-shared store needs its memory
+  # backend to match the machine size.
+  virtualisation.vmVariant.virtualisation = {
+    memorySize = 8192;
+    cores = 4;
+  };
+
   system.nixos.distroName = "CakeOS";
   system.nixos.distroId = "cakeos";
   system.stateVersion = "26.05";

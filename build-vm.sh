@@ -199,7 +199,10 @@ else
     NIX_DISK_IMAGE="$TEMP_DIR/cakeos-$TARGET.qcow2" \
     USE_TMPDIR=1 \
     TMPDIR="$TEMP_DIR/vm-tmp" \
-    QEMU_OPTS="-m 8192 -smp 4 $VM_GPU -display sdl,gl=on" \
+    # Memory and cores come from virtualisation.vmVariant in the host config:
+    # the VM's virtiofs store share needs a memory backend of the same size,
+    # so an -m here would conflict with it and QEMU refuses to start.
+    QEMU_OPTS="$VM_GPU -display sdl,gl=on" \
         "./$RUN_VM"
 fi
 
