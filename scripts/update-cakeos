@@ -35,6 +35,9 @@ def main [] {
     }
 
     let tmp_dir = (^mktemp -d | str trim)
+    # mktemp makes it 0700, and rsync -a copies the top directory's mode onto
+    # /etc/cakeos, which would lock every non-root user out of the flake.
+    ^chmod 755 $tmp_dir
     print "==> Cloning latest changes to temporary directory..."
 
     try {

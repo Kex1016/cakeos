@@ -95,7 +95,12 @@
             extraSpecialArgs = specialArgs;
             useGlobalPkgs = true;
             useUserPackages = true;
-            backupFileExtension = "bak";
+            # A file Home Manager would replace is moved to <file>.bak-<timestamp>. With
+            # a fixed `.bak`, an app that keeps rewriting a managed file (VSCodium's
+            # settings.json) fails the second activation: the old .bak is in the way.
+            backupCommand = "${pkgs.writeShellScript "hm-backup" ''
+              ${pkgs.coreutils}/bin/mv -- "$1" "$1.bak-$(${pkgs.coreutils}/bin/date +%Y%m%d-%H%M%S)"
+            ''}";
             sharedModules = commonHomeModules;
           };
         }
