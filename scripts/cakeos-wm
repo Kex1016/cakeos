@@ -324,11 +324,12 @@ def "main switch" [
 ] {
     check-user
     let staged = (prepare-flake $branch $repo (not $no_update))
-    switch-to $target $staged $branch $yes
+    switch-to $target (flake) $staged $branch $yes
 }
 
-def switch-to [target: string, staged: string, branch: string, yes: bool] {
-    let installed = (flake)
+# `installed` is the live CakeOS (/etc/cakeos) the staged copy replaces; pass it
+# in, since CAKEOS_FLAKE points at the staged copy from here on.
+def switch-to [target: string, installed: string, staged: string, branch: string, yes: bool] {
     $env.CAKEOS_FLAKE = $staged
     let names = (desktops | get name)
     if $target not-in $names {
@@ -398,6 +399,9 @@ def switch-to [target: string, staged: string, branch: string, yes: bool] {
         }
     }
 
+    if ($installed | path expand) == ($staged | path expand) {
+        error make { msg: "internal error: the staged CakeOS and the installed one are the same directory" }
+    }
     print $"==> Installing the new CakeOS into ($installed) \(the old one stays in ($BACKUP)\)"
     ^sudo mkdir -p ($BACKUP | path dirname)
     ^sudo $rsync -a --delete $"($installed)/" $"($BACKUP)/"
@@ -520,6 +524,7 @@ def main [
 ] {
     check-user
     let staged = (prepare-flake $branch $repo (not $no_update))
+    let installed = (flake)
     $env.CAKEOS_FLAKE = $staged
     let all = (desktops)
     let running = (running-desktop ($all | get name))
@@ -531,5 +536,5 @@ def main [
     print $"Running: ($running)"
     let pick = ($choices | each { |d| $"($d.name)  —  ($d.description)" } | input list "Switch to:")
     if ($pick | is-empty) { return }
-    switch-to ($pick | split row "  —  " | first) $staged $branch false
+    switch-to ($pick | split row "  —  " | first) $installed $staged $branch false
 }
