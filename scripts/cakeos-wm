@@ -347,13 +347,17 @@ def switch-to [target: string, staged: string, branch: string, yes: bool] {
     let out = ((state-root) | path join ".system")
     mkdir (state-root)
     print "==> Building the new system (your session stays up meanwhile)..."
-    let built = (^nix build $"path:($staged)#nixosConfigurations.($config).config.system.build.toplevel" --out-link $out --print-out-paths | complete)
-    if $built.exit_code != 0 {
-        print $built.stderr
-        print "!!! Build failed; nothing was changed."
+    # --fallback: when a binary cache answers but then fails to deliver (the
+    # CachyOS kernel's cache is often slow), build that path instead of failing.
+    # Nix's progress goes straight to the terminal; only the result is captured.
+    let built = (try {
+        ^nix build $"path:($staged)#nixosConfigurations.($config).config.system.build.toplevel" --fallback --out-link $out --print-out-paths
+    } catch { "" })
+    if ($built | str trim) == "" {
+        print "!!! Build failed (see above); nothing was changed."
         exit 1
     }
-    let system = ($built.stdout | lines | last)
+    let system = ($built | lines | last)
     let marker = $"($system)/etc/cakeos/desktop"
     let got = if ($marker | path exists) { open --raw $marker | str trim } else { "" }
     if $got != $target {
