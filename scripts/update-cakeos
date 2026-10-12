@@ -4,10 +4,9 @@
 # Updates the system configuration from the upstream repository while
 # preserving dynamic elements.
 
-# Ssh method
-const REPO_URL = "git@github.com:Kex1016/cakeos.git"
-# Https method
-# const REPO_URL = "https://github.com/Kex1016/cakeos.git"
+# HTTPS, not SSH: the script re-runs itself as root (sudo), and root has no
+# SSH key for GitHub. The repo is public, so an anonymous clone works.
+const REPO_URL = "https://github.com/Kex1016/cakeos.git"
 
 # TEMPORARY: track feat/hecate (modularity + the hecate desktop and cakeos-wm)
 # until it lands on main. Keep in step with cakeos-wm's BRANCH.
