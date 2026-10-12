@@ -16,6 +16,16 @@
     ".local/share/color-schemes"
     ".local/share/icons/Papirus-Hecate"
     ".local/share/icons/Papirus-Hecate-Alt"
+    # GTK/Qt settings files the GNOME and Plasma modules manage through Home
+    # Manager. Under hecate nothing does, so a tool may leave real files here;
+    # stashed, they can't collide with Home Manager's links on the way back
+    # (a second `<file>.bak` would fail activation).
+    ".gtkrc-2.0"
+    ".config/gtk-3.0/settings.ini"
+    ".config/gtk-4.0/settings.ini"
+    ".config/Kvantum/kvantum.kvconfig" # selects the Kvantum theme
+    ".config/qt5ct"
+    ".config/qt6ct"
   ];
 
   # The shell sets the GTK theme, icon theme and colour scheme through gsettings.

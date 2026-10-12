@@ -9,6 +9,7 @@
 #   cakeos-wm [--branch B] [--no-update]           pick a desktop from a menu
 #   cakeos-wm switch <name> [--branch B] [--no-update] [--yes]
 #   cakeos-wm list            show the desktops and which one is running
+#   cakeos-wm dotfiles [<desktop>]  what a switch stashes for each desktop
 #   cakeos-wm log             show the log of the last switch
 #
 # It works from any CakeOS version, including one too old to ship it:
@@ -36,6 +37,17 @@
 #      manager again.
 # If activation fails, the old system, /etc/cakeos and the old desktop's stash
 # are put back.
+#
+# Your own additions go in ~/.config/cakeos/wm.toml (paths relative to $HOME,
+# globs allowed; a bare string moves, { path, mode = "copy" } leaves the
+# original in place and snapshots it):
+#
+#   [dotfiles]
+#   shared  = [ ".config/foo", { path = ".config/gtk-3.0/bookmarks", mode = "copy" } ]
+#   gnome   = [ ".config/bar" ]       # per desktop, by name
+#   exclude = [ ".config/gsconnect" ] # drop an entry, shipped ones included
+#
+# "shared" means every desktop: each keeps its own copy, restored on return.
 
 const FLAKE = "/etc/cakeos"
 const REPO = "https://github.com/Kex1016/cakeos.git"
@@ -46,6 +58,7 @@ const BACKUP = "/var/lib/cakeos-wm/previous"
 const OVERRIDE = "gen/overrides/desktop.nix"
 const LOG = "/var/log/cakeos-wm.log"
 const UNIT = "cakeos-wm-switch"
+const USER_LIST = ".config/cakeos/wm.toml"
 
 def flake [] { $env.CAKEOS_FLAKE? | default $FLAKE }
 
@@ -185,22 +198,32 @@ def place [src: string, dst: string, displaced: string, home: string] {
 }
 
 # Move what's at src (under $HOME) into dst, leaving Home Manager's links.
-def stash-path [src: string, dst: string, displaced: string, home: string, dry: bool] {
+# Copy src to dst, replacing an older snapshot there.
+def place-copy [src: string, dst: string] {
+    if (kind $dst) != "" { rm -rf $dst }
+    mkdir ($dst | path dirname)
+    ^cp -a $src $dst
+}
+
+# Move (or with `copy`, snapshot) what's at src (under $HOME) into dst,
+# leaving Home Manager's links.
+def stash-path [src: string, dst: string, displaced: string, home: string, dry: bool, copy: bool] {
     let k = (kind $src)
     if $k == "" or (is-store-link $src) { return }
     if $k == "dir" and (has-store-links $src) {
         # A directory Home Manager links into: take only what it doesn't own.
         for c in (children $src) {
-            stash-path $c ($dst | path join ($c | path basename)) $displaced $home $dry
+            stash-path $c ($dst | path join ($c | path basename)) $displaced $home $dry $copy
         }
         return
     }
-    print $"   ($src | path relative-to $home)"
-    if not $dry { place $src $dst $displaced $home }
+    print $"   ($src | path relative-to $home)(if $copy { '  (copy)' } else { '' })"
+    if $dry { return }
+    if $copy { place-copy $src $dst } else { place $src $dst $displaced $home }
 }
 
 # Put src (in the stash) back at dst. Home Manager's links win over the stash.
-def restore-path [src: string, dst: string, displaced: string, home: string] {
+def restore-path [src: string, dst: string, displaced: string, home: string, dry: bool] {
     let k = (kind $src)
     let d = (kind $dst)
     if (is-store-link $dst) {
@@ -209,12 +232,13 @@ def restore-path [src: string, dst: string, displaced: string, home: string] {
     }
     if $k == "dir" and $d == "dir" {
         for c in (children $src) {
-            restore-path $c ($dst | path join ($c | path basename)) $displaced $home
+            restore-path $c ($dst | path join ($c | path basename)) $displaced $home $dry
         }
         return
     }
-    print $"   ($dst | path relative-to $home)"
-    place $src $dst $displaced $home
+    let note = if $d != "" { "  (displaces what is there now)" } else { "" }
+    print $"   ($dst | path relative-to $home)($note)"
+    if not $dry { place $src $dst $displaced $home }
 }
 
 def expand [home: string, pattern: string] {
@@ -230,6 +254,79 @@ def dconf-bin [] { $env.CAKEOS_WM_DCONF? | default "dconf" }
 
 def has-dconf [] { (which (dconf-bin) | is-not-empty) or ((dconf-bin) | path exists) }
 
+# --- what to stash ----------------------------------------------------------
+
+# ~/.config/cakeos/wm.toml, or {} when absent. A broken file never stops a switch.
+def user-config [] {
+    let file = ($env.HOME | path join $USER_LIST)
+    if not ($file | path exists) { return {} }
+    try { open $file } catch { |e|
+        print $"   !! ignoring ($file): ($e.msg)"
+        {}
+    }
+}
+
+# One wm.toml entry as { path, mode, origin }, or null (with a warning) if unusable.
+def user-entry [e: any, origin: string] {
+    let entry = if ($e | describe | str starts-with "string") {
+        { path: $e, mode: "move" }
+    } else if ($e | describe | str starts-with "record") {
+        { path: ($e.path? | default ""), mode: ($e.mode? | default "move") }
+    } else {
+        { path: "", mode: "" }
+    }
+    let p = $entry.path
+    let problem = if ($p | str trim) == "" {
+        "not a path"
+    } else if ($p | str starts-with "/") or ($p | str starts-with "~") {
+        "must be relative to $HOME"
+    } else if ".." in ($p | split row "/") {
+        "must stay inside $HOME"
+    } else if ($p | str starts-with ".config/dconf") {
+        "dconf's database moves every desktop's settings at once; list dconf dirs in state.nix instead"
+    } else if $entry.mode not-in [move copy] {
+        $"unknown mode `($entry.mode)` \(move or copy\)"
+    } else { null }
+    if $problem != null {
+        print $"   !! wm.toml \(($origin)\): skipping `($p)`: ($problem)"
+        return null
+    }
+    $entry | insert origin $origin
+}
+
+# Everything a switch away from `desktop` stashes, as { path, mode, origin }:
+# state.nix, then wm.toml (shared, then per desktop), minus wm.toml's excludes.
+# A path listed twice keeps its first entry.
+def stash-plan [desktop: string] {
+    let state = (desktop-state | get $desktop)
+    let dotfiles = ((user-config).dotfiles? | default {})
+    let shipped = ($state.paths | each { |p| { path: $p, mode: "move", origin: "state.nix" } })
+    let shared = ($dotfiles.shared? | default [] | each { |e| user-entry $e "shared" })
+    let own = ($dotfiles | get -o $desktop | default [] | each { |e| user-entry $e $desktop })
+    let excluded = ($dotfiles.exclude? | default [])
+    $shipped ++ $shared ++ $own
+    | where { |e| $e != null and $e.path not-in $excluded }
+    | uniq-by path
+}
+
+# What `stash-plan` lists, checked against the disk.
+def "main dotfiles" [desktop?: string] {
+    let home = $env.HOME
+    let names = if $desktop == null { desktop-state | columns } else { [$desktop] }
+    for d in $names {
+        print $"== ($d)"
+        print (stash-plan $d | each { |e|
+            let found = (expand $home $e.path | where { |p| (kind $p) != "" })
+            let status = if ($found | is-empty) {
+                "absent"
+            } else if ($found | all { |p| is-store-link $p }) {
+                "NixOS manages it, skipped"
+            } else { "present" }
+            { path: $e.path, mode: $e.mode, from: $e.origin, now: $status }
+        })
+    }
+}
+
 # --- stash / restore (run as the desktop's user) ---------------------------
 
 # Move a desktop's runtime state out of the way (used by `switch`).
@@ -239,13 +336,14 @@ def "main stash" [
 ] {
     let home = $env.HOME
     let state = (desktop-state | get $desktop)
+    let plan = (stash-plan $desktop)
     let root = ((state-root) | path join $desktop)
     let displaced = ((state-root) | path join ".displaced" (date now | format date "%Y%m%d-%H%M%S"))
-    print $"==> Stashing ($desktop) into ($root)"
-    for pattern in $state.paths {
-        for src in (expand $home $pattern) {
+    print $"==> Stashing ($desktop) into ($root)(if $dry_run { '  (dry run)' } else { '' })"
+    for e in $plan {
+        for src in (expand $home $e.path) {
             let rel = ($src | path relative-to $home)
-            stash-path $src ($root | path join "home" $rel) $displaced $home $dry_run
+            stash-path $src ($root | path join "home" $rel) $displaced $home $dry_run ($e.mode == "copy")
         }
     }
     if not (has-dconf) {
@@ -264,7 +362,10 @@ def "main stash" [
 }
 
 # Bring a desktop's stashed state back (used by `switch`).
-def "main restore" [desktop: string] {
+def "main restore" [
+    desktop: string
+    --dry-run # only list what would come back
+] {
     let home = $env.HOME
     let root = ((state-root) | path join $desktop)
     if not ($root | path exists) {
@@ -272,11 +373,11 @@ def "main restore" [desktop: string] {
         return
     }
     let displaced = ((state-root) | path join ".displaced" (date now | format date "%Y%m%d-%H%M%S"))
-    print $"==> Restoring ($desktop) from ($root)"
+    print $"==> Restoring ($desktop) from ($root)(if $dry_run { '  (dry run)' } else { '' })"
     let files = ($root | path join "home")
     if ($files | path exists) {
         for c in (children $files) {
-            restore-path $c ($home | path join ($c | path relative-to $files)) $displaced $home
+            restore-path $c ($home | path join ($c | path relative-to $files)) $displaced $home $dry_run
         }
     }
     let dconf = ($root | path join "dconf")
@@ -284,12 +385,13 @@ def "main restore" [desktop: string] {
         for f in (glob $"($dconf)/*.ini") {
             let dir = (dconf-dir $f)
             print $"   dconf ($dir)"
+            if $dry_run { continue }
             open --raw $f | run-external (dconf-bin) load $dir
             rm $f
         }
     }
     # Whatever is left was kept on purpose (see above); drop the empty shell.
-    ^find $root -depth -type d -empty -delete
+    if not $dry_run { ^find $root -depth -type d -empty -delete }
 }
 
 # --- switching ------------------------------------------------------------

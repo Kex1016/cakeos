@@ -39,6 +39,21 @@
     ".local/share/krunnerstaterc"
     ".local/share/klipper"
     ".local/share/color-schemes"
+    ".config/dolphinrc"
+    ".local/share/dolphin"
+    ".config/kdeconnect"
+    ".local/share/kdeconnect"
+    ".config/kiorc"
+    ".config/kservicemenurc"
+    ".config/kfontinstrc"
+    ".config/kgammarc"
+    ".local/share/RecentDocuments"
+    # kde-gtk-config's GTK colours and the Kvantum theme choice.
+    ".config/gtk-3.0/colors.css"
+    ".config/gtk-4.0/gtk.css"
+    ".config/Kvantum/kvantum.kvconfig"
+    # Not here on purpose: .local/share/user-places.xbel. hecate's Qt apps use
+    # the KDE file dialog too, so those places are shared.
   ];
 
   # Home Manager's gtk module mirrors the GTK theme into dconf.

@@ -109,7 +109,10 @@ Each `modules/desktops/<de>/` provides:
 - `state.nix` (optional) — `{ paths = [ ... ]; dconf = [ ... ]; }`: what the desktop writes at
   runtime (`$HOME`-relative files/dirs, globs allowed, and dconf directories). `cakeos-wm`
   stashes it when switching away and restores it on return. `modules/desktops/state.nix`
-  collects them as plain Nix so the script can `nix eval --file` it
+  collects them as plain Nix so the script can `nix eval --file` it. Only list what is *this*
+  desktop's: state shared with another desktop (hecate uses GNOME's apps, so Nautilus/Text
+  Editor/Software state; hecate's Qt apps use KDE's file dialog, so `user-places.xbel`) stays
+  out, or switching would hide it from the other one
 
 `hecate/` is the exception to "DE packages from nixpkgs": it comes from the `hecate` flake
 input (Kex1016/wl-hex, private, hence `git+https` so git's credentials are used). Its
@@ -224,7 +227,13 @@ build/install-time tooling that must run before nushell is on the target.
   goes to `desktops/.displaced/<time>/`. A failed activation puts back the old system,
   `/etc/cakeos` and the old desktop's stash. Tools an old system may lack (git, rsync, dconf)
   come from nixpkgs on demand. `cakeos-wm stash|restore <de> [--dry-run]` run just those
-  halves.
+  halves; `cakeos-wm dotfiles [<de>]` prints what a switch would stash and whether it exists.
+  On top of `state.nix`, users list their own paths in `~/.config/cakeos/wm.toml`
+  (`[dotfiles] shared = [...]`, `<de> = [...]`, `exclude = [...]`; a bare string moves,
+  `{ path, mode = "copy" }` snapshots and leaves the original). Read at runtime, never needed by
+  the build; a broken file or bad entry (absolute, `..`, `.config/dconf/*`, unknown mode) is
+  skipped with a warning rather than failing a switch. "shared" means every desktop keeps its
+  own copy.
 - `scripts/hello-cakeos`, `scripts/boot-windows` (EFI boot-to-Windows helper),
   `scripts/compress-media` (ffmpeg/ImageMagick "shrink to N MiB", zenity dialogs),
   `scripts/prism-tmp-wrapper` (stages a Prism Launcher Minecraft instance into `/tmp` for
