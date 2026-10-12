@@ -129,7 +129,8 @@
           ''
             install -Dm755 ${./scripts/cakeos-wm} $out/libexec/cakeos-wm
             substituteInPlace $out/libexec/cakeos-wm \
-              --replace-fail "#!/usr/bin/env nu" "#!${pkgs.nushell}/bin/nu"
+              --replace-fail "#!/usr/bin/env nu" "#!${pkgs.nushell}/bin/nu" \
+              --replace-fail "@cakeosSource@" "${self}"
             makeWrapper $out/libexec/cakeos-wm $out/bin/cakeos-wm \
               --prefix PATH : ${
                 lib.makeBinPath [

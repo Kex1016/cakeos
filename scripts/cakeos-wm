@@ -62,6 +62,20 @@ const USER_LIST = ".config/cakeos/wm.toml"
 
 def flake [] { $env.CAKEOS_FLAKE? | default $FLAKE }
 
+# The flake package fills this in with its own CakeOS source (nix run); a copy
+# run straight from ~/.local/bin keeps the placeholder.
+const BUNDLED = "@cakeosSource@"
+
+# Where the list of desktops and their state.nix come from: the CakeOS being
+# switched to (CAKEOS_FLAKE, set once a staged copy exists), else this script's
+# own version, else the installed one. An old /etc/cakeos may predate a desktop
+# or state.nix entirely.
+def catalog [] {
+    if $env.CAKEOS_FLAKE? != null { return $env.CAKEOS_FLAKE }
+    if ($BUNDLED | str starts-with "/nix/store/") { return $BUNDLED }
+    $FLAKE
+}
+
 def state-root [] { $"($env.HOME)/.local/state/cakeos/desktops" }
 
 # A command from PATH, or from nixpkgs when this (possibly old) system lacks it.
@@ -74,7 +88,7 @@ def need [cmd: string, pkg?: string] {
 # --- reading the flake ----------------------------------------------------
 
 def desktops [] {
-    let dir = $"(flake)/modules/desktops"
+    let dir = $"(catalog)/modules/desktops"
     ^nix eval --impure --json --expr $"
         let
           dir = ($dir);
@@ -87,7 +101,7 @@ def desktops [] {
 }
 
 def desktop-state [] {
-    let file = $"(flake)/modules/desktops/state.nix"
+    let file = $"(catalog)/modules/desktops/state.nix"
     if ($file | path exists) {
         ^nix eval --json --file $file | from json
     } else {
@@ -298,7 +312,7 @@ def user-entry [e: any, origin: string] {
 # state.nix, then wm.toml (shared, then per desktop), minus wm.toml's excludes.
 # A path listed twice keeps its first entry.
 def stash-plan [desktop: string] {
-    let state = (desktop-state | get $desktop)
+    let state = (desktop-state | get -o $desktop | default { paths: [], dconf: [] })
     let dotfiles = ((user-config).dotfiles? | default {})
     let shipped = ($state.paths | each { |p| { path: $p, mode: "move", origin: "state.nix" } })
     let shared = ($dotfiles.shared? | default [] | each { |e| user-entry $e "shared" })
@@ -335,7 +349,7 @@ def "main stash" [
     --dry-run # only list what would move
 ] {
     let home = $env.HOME
-    let state = (desktop-state | get $desktop)
+    let state = (desktop-state | get -o $desktop | default { paths: [], dconf: [] })
     let plan = (stash-plan $desktop)
     let root = ((state-root) | path join $desktop)
     let displaced = ((state-root) | path join ".displaced" (date now | format date "%Y%m%d-%H%M%S"))
