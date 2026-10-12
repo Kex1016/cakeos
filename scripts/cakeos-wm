@@ -121,6 +121,18 @@ def running-desktop [names: list<string>] {
     $names | input list "Which desktop is running right now?"
 }
 
+# The binary caches a (staged) CakeOS declares, from its shared substituters
+# module; empty for a version without one.
+def staged-caches [dir: string] {
+    let file = ($dir | path join "modules/cakeos/substituters.nix")
+    if not ($file | path exists) { return { substituters: [], keys: [] } }
+    let settings = (^nix eval --impure --json --expr $"\(import ($file) {}\).nix.settings" | from json)
+    {
+        substituters: ($settings.substituters? | default [])
+        keys: ($settings.trusted-public-keys? | default [])
+    }
+}
+
 # A copy of CakeOS to build from: the latest from git, or the installed one,
 # with this machine's gen/ in it either way.
 def prepare-flake [branch: string, repo: string, update: bool] {
@@ -347,11 +359,20 @@ def switch-to [target: string, staged: string, branch: string, yes: bool] {
     let out = ((state-root) | path join ".system")
     mkdir (state-root)
     print "==> Building the new system (your session stays up meanwhile)..."
+    # The build runs as root so it can use the new CakeOS's binary caches: the
+    # running (possibly old) system may not list them yet, and Nix ignores
+    # caches passed on the command line by users it doesn't trust. NIX_CONFIG
+    # is kept for an access token (private flake inputs).
     # --fallback: when a binary cache answers but then fails to deliver (the
     # CachyOS kernel's cache is often slow), build that path instead of failing.
     # Nix's progress goes straight to the terminal; only the result is captured.
+    let caches = (staged-caches $staged)
     let built = (try {
-        ^nix build $"path:($staged)#nixosConfigurations.($config).config.system.build.toplevel" --fallback --out-link $out --print-out-paths
+        (^sudo --preserve-env=NIX_CONFIG nix build
+            $"path:($staged)#nixosConfigurations.($config).config.system.build.toplevel"
+            --fallback --out-link $out --print-out-paths
+            --option extra-substituters ($caches.substituters | str join " ")
+            --option extra-trusted-public-keys ($caches.keys | str join " "))
     } catch { "" })
     if ($built | str trim) == "" {
         print "!!! Build failed (see above); nothing was changed."

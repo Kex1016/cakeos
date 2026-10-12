@@ -2,12 +2,16 @@
   lib,
   pkgs,
   osConfig,
+  inputs,
   ...
 }:
 
 lib.mkIf (builtins.elem "creative" osConfig.cakeos.groups) {
   home.packages = with pkgs; [
-    affinity-v3
+    # From affinity-nix's own packages, not its overlay: the overlay rebuilds
+    # it (and its Wine) against our nixpkgs, which never matches what
+    # cache.forall.systems serves (modules/cakeos/substituters.nix).
+    inputs.affinity-nix.packages.${pkgs.stdenv.hostPlatform.system}.affinity-v3
     blockbench
     drawio
     gpu-screen-recorder

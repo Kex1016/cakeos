@@ -73,7 +73,6 @@
           inputs.nur.overlays.default
           inputs.nix-cachyos-kernel.overlays.pinned
           inputs.millennium.overlays.default
-          inputs.affinity-nix.overlays.default
         ];
       };
 
