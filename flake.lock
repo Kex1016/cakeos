@@ -178,11 +178,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791802478,
-        "narHash": "sha256-kd8P0BGI30kUr4zzo5mJmeiHWJN7H87LFDjIyF4+R10=",
+        "lastModified": 1791803607,
+        "narHash": "sha256-faHRy/0h3em6hDlB4wEr+yUPK7s06rLeisRBG2O76uo=",
         "owner": "Kex1016",
         "repo": "wl-hex",
-        "rev": "f5afcd8827941e2961267454d583b71d0a745cf3",
+        "rev": "6aab0d925fc9882322274981dd21067efb5171c6",
         "type": "github"
       },
       "original": {
