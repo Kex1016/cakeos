@@ -29,6 +29,12 @@
         keyboard = {
           inherit (osConfig.services.xserver.xkb) layout variant;
         };
+        # Mice get no acceleration, as under GNOME (gnome/dconf.nix:
+        # peripherals/mouse accel-profile = "flat"). libinput's default
+        # adaptive profile makes fast movements travel much further.
+        # Touchpads keep adaptive. The shell's hecate settings page can
+        # change both per session.
+        input."type:pointer".accel_profile = "flat";
       };
     };
 
