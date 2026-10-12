@@ -11,7 +11,6 @@ lib.mkIf (builtins.elem "gaming" osConfig.cakeos.groups) {
     r2modman
     xivlauncher
     protonplus
-    etterna
     ocelot-desktop
     sgdboop
   ];
