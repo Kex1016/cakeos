@@ -130,7 +130,7 @@ one materialises. GNOME additionally splits its home side into `dconf.nix` / `th
 `modules/groups/<group>.nix` is the desktop-agnostic half of a group, gated on `cakeos.groups`.
 The desktop-specific half lives in `modules/desktops/<de>/groups.nix` and merges on top. That
 split is what lets `creative` mean GIMP + Inkscape under GNOME and Krita + Kdenlive under Plasma
-while OBS and Affinity stay shared.
+while OBS stays shared.
 
 ### Install-time options (`modules/cakeos/install-options.nix`)
 

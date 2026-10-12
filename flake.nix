@@ -40,12 +40,6 @@
     nix-flatpak.url = "github:gmodena/nix-flatpak";
     spicetify-nix.url = "github:Gerg-L/spicetify-nix";
     millennium.url = "github:SteamClientHomebrew/Millennium/next?dir=packages/nix";
-    # Pinned to the newest commit whose Wine cache.forall.systems has; later
-    # ones (a nixpkgs bump) aren't built there yet, so Wine compiles from
-    # source. Drop the rev once the cache catches up. To check a revision: the
-    # wine store path's hash should answer 200 at
-    # https://cache.forall.systems/<hash>.narinfo.
-    affinity-nix.url = "github:mrshmllow/affinity-nix/a480a8bde9e476efd4d6b64491a8bb19647e6f83";
     # The hecate compositor and its bundled shell (modules/desktops/hecate).
     # git+https rather than github: so a private repo is fetched with git's own
     # credentials (the github: tarball fetcher is anonymous and gets a 404).

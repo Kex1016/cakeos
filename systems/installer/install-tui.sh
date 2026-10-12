@@ -532,7 +532,7 @@ printf '\n'
 
 mapfile -t GROUP_CHOICE < <(pick_many "Package groups" \
     "gaming        Steam, Proton, gamescope, Prism Launcher, mod managers" \
-    "creative      OBS Studio, Affinity, Blockbench, draw.io, screen recording" \
+    "creative      OBS Studio, Blockbench, draw.io, screen recording" \
     "development   VSCodium, Neovim, JetBrains IDEA, toolchains, language servers" \
     "office        OnlyOffice, Teams, Proton Pass, mail, Synology Drive" \
     "communication Discord (Vesktop)" \

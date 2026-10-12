@@ -20,22 +20,16 @@
     substituters = [
       "https://cache.nixos.org"
       "https://nix-community.cachix.org"
-      # affinity-nix's prebuilt Wine and prefix (the creative group); without
-      # it Wine is compiled from source. Only hits when Affinity comes from
-      # affinity-nix's own `packages` (modules/groups/creative.nix).
-      "https://cache.forall.systems"
     ];
 
     trusted-substituters = [
       "https://cache.nixos.org"
       "https://nix-community.cachix.org"
-      "https://cache.forall.systems"
     ];
 
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-      "cache.forall.systems:5PmD7QO4MSF8YgyRZtkSGXRDo96H3bybIf2SsQh8ScI="
     ];
 
     # The lantian cache 307-redirects NARs to third-party object storage whose
