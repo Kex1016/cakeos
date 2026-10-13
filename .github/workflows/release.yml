@@ -31,9 +31,6 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.FLAKE_INPUTS_TOKEN || github.token }}
 
-      - name: Magic Nix Cache
-        uses: determinate-systems/magic-nix-cache-action@v2
-
       - name: Build ISO
         run: nix build .#nixosConfigurations.installer.config.system.build.isoImage
 
