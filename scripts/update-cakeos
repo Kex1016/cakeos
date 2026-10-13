@@ -14,9 +14,10 @@
 const REPO_URL = "https://github.com/Kex1016/cakeos.git"
 const API = "https://api.github.com/repos/Kex1016/cakeos"
 
-# TEMPORARY: track feat/hecate (modularity + the hecate desktop and cakeos-wm)
-# until it lands on main. Keep in step with cakeos-wm's BRANCH.
-const BRANCH = "feat/hecate"
+# Keep in step with cakeos-wm's BRANCH.
+const BRANCH = "main"
+# Branches that were merged into main: machines that recorded one follow main.
+const RETIRED_BRANCHES = ["feat/hecate" "modularity"]
 const TARGET_DIR = "/etc/cakeos"
 # Which upstream commit is installed: written after every sync (and by the
 # installer and cakeos-wm), read by `check`. Not part of the repo.
@@ -36,6 +37,12 @@ def installed-version [] {
     try { open --raw $file | from json } catch { null }
 }
 
+# The branch to follow: the one this machine was installed from, unless it was retired.
+def tracked-branch [installed] {
+    let branch = ($installed.branch? | default $BRANCH)
+    if $branch in $RETIRED_BRANCHES { $BRANCH } else { $branch }
+}
+
 def github [path: string] {
     http get --headers [User-Agent cakeos-updater Accept application/vnd.github+json] $"($API)/($path)"
 }
@@ -52,7 +59,7 @@ def commit-summary [c] {
 # How far the installed CakeOS is behind upstream.
 def check-status [] {
     let installed = (installed-version)
-    let branch = ($installed.branch? | default $BRANCH)
+    let branch = (tracked-branch $installed)
     let latest = (github $"commits/($branch)").sha
     let rev = $installed.rev?
     if $rev == null {
@@ -201,7 +208,7 @@ def "main apply" [
         exit 1
     }
     try {
-        sync-upstream ((installed-version).branch? | default $BRANCH) | ignore
+        sync-upstream (tracked-branch (installed-version)) | ignore
         rebuild $mode
     } catch { |e|
         print $"!!! ($e.msg)"
@@ -219,7 +226,7 @@ def main [] {
     }
 
     try {
-        sync-upstream ((installed-version).branch? | default $BRANCH) | ignore
+        sync-upstream (tracked-branch (installed-version)) | ignore
     } catch { |e|
         print $"!!! Error: ($e.msg)"
         exit 1

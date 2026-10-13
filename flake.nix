@@ -45,10 +45,9 @@
     # The hecate compositor and its bundled shell (modules/desktops/hecate).
     # git+https rather than github: so a private repo is fetched with git's own
     # credentials (the github: tarball fetcher is anonymous and gets a 404).
-    # Points at feat/v1 until it is merged; drop the ref then.
     # Build against a local checkout instead with ./hecate-vm.sh.
     hecate = {
-      url = "github:Kex1016/wl-hex?ref=feat/v1";
+      url = "github:Kex1016/wl-hex";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         home-manager.follows = "home-manager";
