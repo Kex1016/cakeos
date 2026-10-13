@@ -57,7 +57,8 @@
     # same hecate and shell as the session, so it follows that input.
     # Build against a local checkout with HECATE_GREETD_SRC=... ./build-vm.sh hecate.
     hecate-greetd = {
-      url = "github:Kex1016/hecate-greetd";
+      # main explicitly: the repository's default branch is still the old implementation branch.
+      url = "github:Kex1016/hecate-greetd?ref=main";
       inputs.hecate.follows = "hecate";
     };
   };

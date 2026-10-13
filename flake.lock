@@ -138,11 +138,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791921927,
-        "narHash": "sha256-OShSRK5Eyr9gtlUWL6YueDjFRxVWSaF9tJgmCgPjLws=",
+        "lastModified": 1791925383,
+        "narHash": "sha256-dDOQqmfJlaUMKOP9ExwTmEbymDzMePdmzgy8+KbyuEU=",
         "owner": "Kex1016",
         "repo": "wl-hex",
-        "rev": "2ee03a53e2f83df3946a60feeae1b097bc1b3250",
+        "rev": "0dcbd0a772538d0a56ce7ce0bb9de6c6e87487de",
         "type": "github"
       },
       "original": {
@@ -163,17 +163,18 @@
         ]
       },
       "locked": {
-        "lastModified": 1791907677,
-        "narHash": "sha256-jbnKxMFsV16KJ2eBOUx9Ukt29D5mp58aUl9gQDAYQqo=",
+        "lastModified": 1791925480,
+        "narHash": "sha256-SaacqxfmF2lXRdz9tH6Jp0KhvNgsbkiDPMkPC+9WsTI=",
         "owner": "Kex1016",
         "repo": "hecate-greetd",
-        "rev": "7adc1fa0adfa904996b5e9c4054b14c06002081b",
+        "rev": "cec4cef8d5b71db3546479d2439df7a9e0dd475a",
         "type": "github"
       },
       "original": {
         "owner": "Kex1016",
         "repo": "hecate-greetd",
-        "type": "github"
+        "type": "github",
+        "ref": "main"
       }
     },
     "home-manager": {
