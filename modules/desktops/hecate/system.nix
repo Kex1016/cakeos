@@ -9,7 +9,10 @@
 {
   # The module only declares options; everything it does is behind
   # programs.hecate.enable, which is gated below like every other desktop.
-  imports = [ inputs.hecate.nixosModules.default ];
+  imports = [
+    inputs.hecate.nixosModules.default
+    inputs.hecate-greetd.nixosModules.default
+  ];
 
   config = lib.mkIf (config.cakeos.desktop == "hecate") {
     programs.hecate = {
@@ -20,13 +23,15 @@
       gaming.enable = builtins.elem "gaming" config.cakeos.groups;
     };
 
+    # The login screen is the shell's lock screen (hecate-greetd on greetd), with
+    # the wallpaper, colours, monitor layout and keyboard of whoever logs in. Each
+    # user's shell shares those on its own; Settings → hecate-greetd configures it.
+    services.hecate-greetd.enable = true;
+
     services = {
       displayManager = {
-        sddm = {
-          enable = true;
-          wayland.enable = true;
-        };
         defaultSession = "hecate";
+        # hecate-greetd turns this into greetd's initial_session.
         autoLogin = lib.mkIf config.cakeos.autoLogin {
           enable = true;
           user = config.cakeos.primaryUser;

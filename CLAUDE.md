@@ -122,6 +122,13 @@ set (`modules/desktops/gnome/apps.nix`, a plain `pkgs: [ ... ]` list both import
 `mime.nix`, which gates on either desktop. GTK/Qt/icon theming is left to the bundled shell,
 which recolours them from the wallpaper, so `hecate/home.nix` must not enable Home Manager's
 `gtk` module (it would fight the shell over `gtk.css`).
+Its login screen is not SDDM but `hecate-greetd` (the `hecate-greetd` flake input, which
+follows `hecate`): greetd running the bundled shell's lock screen inside hecate, with the
+wallpaper, colours, monitor layout and keyboard of the user being logged in. Each user's shell
+shares those by itself (`hecate-greetd sync` into `/var/lib/hecate-greetd/users/<user>`) and
+configures it under Settings → hecate-greetd. `cakeos.autoLogin` becomes greetd's
+`initial_session`. `HECATE_GREETD_SRC=<checkout> ./build-vm.sh hecate` builds against a local
+hecate-greetd.
 
 Every one of those gates itself on `config.cakeos.desktop` (home-manager modules use
 `osConfig.cakeos.desktop`), so all desktops are imported unconditionally and only the selected
