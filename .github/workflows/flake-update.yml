@@ -1,0 +1,59 @@
+name: Update flake inputs
+
+# Updates flake.lock on main and commits it only when at least one input changed, as
+# "chore(flake): updated X packages and Y options" with the details in the body
+# (.github/flake-update/). Runs on every push to main, weekly, when hecate or hecate-greetd
+# publish a new commit (repository_dispatch from their own workflows), and by hand.
+#
+# Needs the FLAKE_INPUTS_TOKEN secret: a fine-grained token with Contents: read on the private
+# inputs (Kex1016/wl-hex, Kex1016/hecate-greetd). The commit itself is pushed with the
+# workflow's own token, which doesn't start another run.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Mondays, 04:17 UTC.
+    - cron: "17 4 * * 1"
+  repository_dispatch:
+    types: [flake-input-updated]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: flake-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    # Only ever main: scheduled and dispatched runs use the default branch, a push filter alone
+    # wouldn't stop a manual run on another branch.
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check for the inputs token
+        env:
+          TOKEN: ${{ secrets.FLAKE_INPUTS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Add a FLAKE_INPUTS_TOKEN secret (fine-grained token, Contents: read on Kex1016/wl-hex and Kex1016/hecate-greetd); the private inputs can't be fetched without it."
+            exit 1
+          fi
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.FLAKE_INPUTS_TOKEN }}
+            accept-flake-config = false
+
+      - name: Update and report
+        id: update
+        run: bash .github/flake-update/update.sh

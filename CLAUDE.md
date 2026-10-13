@@ -227,7 +227,7 @@ build/install-time tooling that must run before nushell is on the target.
   is the old interactive flow.
 - `scripts/cakeos-wm` — switches an installed machine to another desktop, from any CakeOS
   version: it is also the flake package `cakeos-wm`, so an old install can
-  `nix run 'github:Kex1016/cakeos?ref=<branch>#cakeos-wm' -- --branch <branch>`. It clones the
+  `nix run 'github:Kex1016/cakeos#cakeos-wm'` (or `?ref=<branch>` with `--branch <branch>`). It clones the
   latest `--branch` (default: the one `update-cakeos` tracks; `--no-update` keeps the installed
   one) into a staging dir, copies `/etc/cakeos/gen/` in, writes
   `gen/overrides/desktop.nix` (`cakeos.desktop = lib.mkForce "<de>"`, imported by
@@ -259,10 +259,24 @@ build/install-time tooling that must run before nushell is on the target.
   performance, syncs back on exit) — these get symlinked into the user's `~/.local/bin` via
   `modules/home/apps/essentials.nix` (`home.file.".local/bin"`).
 
-### CI (`.github/workflows/release.yml`)
+### CI (`.github/workflows/`)
 
-Manually triggered (`workflow_dispatch`) — builds the installer ISO and publishes it as a GitHub
-release tagged either with a supplied tag or a timestamp.
+- `release.yml` — builds the installer ISO and publishes it as a GitHub release: on a pushed
+  `v*` tag (named after it), or by hand (`workflow_dispatch`) with a supplied tag or a timestamp.
+- `flake-update.yml` — on main only: every push, weekly (Mondays), on `repository_dispatch`
+  `flake-input-updated` (sent by hecate's and hecate-greetd's own workflows when their main
+  branch moves), and by hand. Runs `.github/flake-update/update.sh`: `nix flake update`, and
+  only when an input changed, evaluates every `gen-presets/` desktop before and after with
+  `inspect.nix` (installed packages by name/version; every enabled `*.enable` and the
+  `*.package` of every enabled module) and commits `flake.lock` as
+  "chore(flake): updated X packages and Y options", with the inputs, packages, options and new
+  evaluation warnings in the body (`report.py`). An update that stops a preset from evaluating
+  is not committed. `inspect.nix` only walks into modules whose `enable` is on, skips hidden
+  (renamed) options and `hardware.nvidia`: unset defaults of other modules can fail in ways
+  `tryEval` can't catch. If it still fails, the script checks the system's `drvPath` instead
+  and reports that preset without details.
+- Both need the `FLAKE_INPUTS_TOKEN` secret (Contents: read on the private Kex1016/wl-hex and
+  Kex1016/hecate-greetd) to fetch those inputs.
 
 ## Adding a desktop environment
 
