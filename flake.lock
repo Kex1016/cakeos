@@ -173,8 +173,7 @@
       "original": {
         "owner": "Kex1016",
         "repo": "hecate-greetd",
-        "type": "github",
-        "ref": "main"
+        "type": "github"
       }
     },
     "home-manager": {
