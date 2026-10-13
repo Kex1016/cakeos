@@ -670,6 +670,8 @@ note "Copying the flake to /mnt/etc/cakeos..."
 mkdir -p /mnt/etc/cakeos
 cp -rL "$FLAKE_URL/." /mnt/etc/cakeos/
 chmod -R +w /mnt/etc/cakeos
+# The upstream commit installed, for `update-cakeos check`.
+cp /etc/cakeos-version.json /mnt/etc/cakeos/.cakeos-version 2>/dev/null || true
 
 log "Capturing hardware config"
 note "Capturing hardware configuration..."

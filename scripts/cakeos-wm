@@ -167,6 +167,13 @@ def prepare-flake [branch: string, repo: string, update: bool] {
     if $update {
         print $"==> Fetching the latest CakeOS \(($repo), branch ($branch)\)"
         run-external (need git) "clone" "--quiet" "--depth" "1" "-b" $branch $repo $dir
+        # What update-cakeos's check compares against upstream.
+        {
+            repo: $repo
+            branch: $branch
+            rev: (run-external (need git) "-C" $dir "rev-parse" "HEAD" | str trim)
+            updated: (date now | format date "%+")
+        } | to json | save -f $"($dir)/.cakeos-version"
         rm -rf $"($dir)/.git"
     } else {
         print $"==> Using the installed CakeOS in ((flake))"

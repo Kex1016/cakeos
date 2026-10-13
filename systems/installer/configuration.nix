@@ -21,6 +21,13 @@ in
 
   # Embed the entire CakeOS flake into the ISO at a static path
   environment.etc."cakeos".source = flakeSrc;
+  # Which upstream commit this ISO carries, for update-cakeos's check (`rev` is
+  # only known when the ISO was built from a clean git tree).
+  environment.etc."cakeos-version.json".text = builtins.toJSON {
+    repo = "https://github.com/Kex1016/cakeos.git";
+    branch = null;
+    rev = flakeSrc.rev or null;
+  };
   # Copy the TUI script and disko config into the ISO
   environment.etc."cake-install.sh" = {
     source = ./install-tui.sh;

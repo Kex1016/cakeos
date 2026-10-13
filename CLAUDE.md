@@ -212,7 +212,14 @@ build/install-time tooling that must run before nushell is on the target.
 - `scripts/update-cakeos` — deployed to `/etc/cakeos` on real installs; pulls latest `main` from
   the upstream GitHub repo via a temp clone + rsync, explicitly preserving `gen/` and never
   leaving a `.git` dir in `/etc/cakeos` (a `.git` there would make Nix treat `gen/` as untracked
-  and ignore it under flakes' git-tracked-files-only semantics).
+  and ignore it under flakes' git-tracked-files-only semantics). Every sync records the
+  upstream commit in `/etc/cakeos/.cakeos-version` (JSON: repo, branch, rev, updated; excluded
+  from the rsync), as do the installer (from the ISO's `/etc/cakeos-version.json`, when the ISO
+  was built from a clean tree) and `cakeos-wm`. Subcommands: `check [--json]` compares that
+  revision with the branch through the GitHub API (no root; an unknown revision lists recent
+  commits) and is what hecate's shell polls; `apply --mode boot|switch` syncs and rebuilds
+  without asking (root; the shell's updater runs it through `sudo -S`). With no subcommand it
+  is the old interactive flow.
 - `scripts/cakeos-wm` — switches an installed machine to another desktop, from any CakeOS
   version: it is also the flake package `cakeos-wm`, so an old install can
   `nix run 'github:Kex1016/cakeos?ref=<branch>#cakeos-wm' -- --branch <branch>`. It clones the
