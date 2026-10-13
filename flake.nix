@@ -133,27 +133,51 @@
 
       # The desktop switcher, runnable on any CakeOS install, however old:
       #   nix run 'github:Kex1016/cakeos?ref=<branch>#cakeos-wm' -- --branch <branch>
-      packages.${system}.cakeos-wm =
-        pkgs.runCommand "cakeos-wm"
-          {
-            nativeBuildInputs = [ pkgs.makeWrapper ];
-            meta.mainProgram = "cakeos-wm";
-          }
-          ''
-            install -Dm755 ${./scripts/cakeos-wm} $out/libexec/cakeos-wm
-            substituteInPlace $out/libexec/cakeos-wm \
-              --replace-fail "#!/usr/bin/env nu" "#!${pkgs.nushell}/bin/nu" \
-              --replace-fail "@cakeosSource@" "${self}"
-            makeWrapper $out/libexec/cakeos-wm $out/bin/cakeos-wm \
-              --prefix PATH : ${
-                lib.makeBinPath [
-                  pkgs.git
-                  pkgs.rsync
-                  pkgs.dconf
-                  pkgs.dbus
-                ]
-              }
-          '';
+      packages.${system} = {
+        cakeos-wm =
+          pkgs.runCommand "cakeos-wm"
+            {
+              nativeBuildInputs = [ pkgs.makeWrapper ];
+              meta.mainProgram = "cakeos-wm";
+            }
+            ''
+              install -Dm755 ${./scripts/cakeos-wm} $out/libexec/cakeos-wm
+              substituteInPlace $out/libexec/cakeos-wm \
+                --replace-fail "#!/usr/bin/env nu" "#!${pkgs.nushell}/bin/nu" \
+                --replace-fail "@cakeosSource@" "${self}"
+              makeWrapper $out/libexec/cakeos-wm $out/bin/cakeos-wm \
+                --prefix PATH : ${
+                  lib.makeBinPath [
+                    pkgs.git
+                    pkgs.rsync
+                    pkgs.dconf
+                    pkgs.dbus
+                  ]
+                }
+            '';
+
+        # The updater every install runs (its scripts/update-cakeos hands over to this), so
+        # where updates come from and how they're applied is always the latest CakeOS's call.
+        update-cakeos =
+          pkgs.runCommand "update-cakeos"
+            {
+              nativeBuildInputs = [ pkgs.makeWrapper ];
+              meta.mainProgram = "update-cakeos";
+            }
+            ''
+              install -Dm755 ${./scripts/update-cakeos} $out/libexec/update-cakeos
+              substituteInPlace $out/libexec/update-cakeos \
+                --replace-fail "#!/usr/bin/env nu" "#!${pkgs.nushell}/bin/nu"
+              makeWrapper $out/libexec/update-cakeos $out/bin/update-cakeos \
+                --set CAKEOS_UPDATER_LATEST 1 \
+                --prefix PATH : ${
+                  lib.makeBinPath [
+                    pkgs.git
+                    pkgs.rsync
+                  ]
+                }
+            '';
+      };
 
       nixosConfigurations = {
         cakeos = mkHost "cakeos";

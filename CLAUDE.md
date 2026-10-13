@@ -224,7 +224,7 @@ build/install-time tooling that must run before nushell is on the target.
   revision with the branch through the GitHub API (no root; an unknown revision lists recent
   commits) and is what hecate's shell polls; `apply --mode boot|switch` syncs and rebuilds
   without asking (root; the shell's updater runs it through `sudo -S`). With no subcommand it
-  is the old interactive flow.
+  is the old interactive flow. Every entry point first hands over to the latest updater, `nix run --refresh github:Kex1016/cakeos#update-cakeos` (the flake package, whose wrapper sets `CAKEOS_UPDATER_LATEST` so it doesn't hand over again), so where updates come from and how they're applied is always the newest CakeOS's call. Installs whose script predates that still sync their recorded branch, so retired branches (`feat/hecate`, `modularity`) are kept fast-forwarded to main: one sync brings the new script; the newest updater maps them to main (`RETIRED_BRANCHES`).
 - `scripts/cakeos-wm` — switches an installed machine to another desktop, from any CakeOS
   version: it is also the flake package `cakeos-wm`, so an old install can
   `nix run 'github:Kex1016/cakeos#cakeos-wm'` (or `?ref=<branch>` with `--branch <branch>`). It clones the

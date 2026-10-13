@@ -23,6 +23,24 @@ const TARGET_DIR = "/etc/cakeos"
 # installer and cakeos-wm), read by `check`. Not part of the repo.
 const VERSION_FILE = ".cakeos-version"
 
+# This copy hands over to the latest CakeOS's updater, which decides where updates come from
+# and how they're applied, however old the install. That copy runs with CAKEOS_UPDATER_LATEST
+# set (the flake package's wrapper sets it).
+const LATEST = "github:Kex1016/cakeos#update-cakeos"
+
+def --wrapped run-latest [...args: string] {
+    if ($env.CAKEOS_UPDATER_LATEST? | is-not-empty) {
+        return
+    }
+    let code = try {
+        ^nix --extra-experimental-features "nix-command flakes" run --refresh $LATEST -- ...$args
+        0
+    } catch {
+        $env.LAST_EXIT_CODE? | default 1
+    }
+    exit $code
+}
+
 def is-root [] {
     (^id -u | into int) == 0
 }
@@ -171,6 +189,7 @@ def rebuild [mode: string] {
 def "main check" [
     --json # machine-readable, for the desktop shell's update checker
 ] {
+    run-latest check ...(if $json { [--json] } else { [] })
     let status = try { check-status } catch { |e|
         if $json {
             print ({ error: $e.msg } | to json -r)
@@ -199,6 +218,7 @@ def "main check" [
 def "main apply" [
     --mode: string = "boot" # nixos-rebuild mode: boot (next restart) or switch (now)
 ] {
+    run-latest apply --mode $mode
     if not (is-root) {
         print "!!! `update-cakeos apply` needs root (run it through sudo)."
         exit 1
@@ -222,8 +242,9 @@ def main [] {
     if not (is-root) {
         print $"==> This script needs root privileges to update ($TARGET_DIR)."
         print "==> Requesting sudo..."
-        exec sudo $nu.current-exe $env.CURRENT_FILE
+        exec sudo --preserve-env=CAKEOS_UPDATER_LATEST $nu.current-exe $env.CURRENT_FILE
     }
+    run-latest
 
     try {
         sync-upstream (tracked-branch (installed-version)) | ignore
