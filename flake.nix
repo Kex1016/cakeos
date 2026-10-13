@@ -26,8 +26,10 @@
       url = "github:nix-community/NUR";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Neovim (CakeVim, modules/home/editor/cakevim.nix). git+https: the same over the
+    # GitHub API-free git transport as hecate.
     nvf = {
-      url = "github:mana-byte/nvf-configuration";
+      url = "git+https://github.com/notashelf/nvf";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     zen-browser = {

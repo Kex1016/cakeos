@@ -165,6 +165,11 @@ import everything unconditionally and let the install-time choice decide.
   (`users.defaultUserShell` in `system.nix`, listed in `environment.shells` so the display
   manager lists the user)
 - `modules/home/xdg/` — XDG user directories
+- `modules/home/editor/cakevim.nix` — CakeVim: Neovim through upstream nvf's Home Manager
+  module (`programs.nvf`, the `nvf` input, `git+https` like hecate), set up after NvChad:
+  One Dark, lualine, bufferline, nvim-tree, telescope, which-key, a dashboard-nvim start
+  screen with the CakeVim banner, LSP + treesitter for the usual languages, and NvChad's key
+  bindings (leader is Space). `nvim`, `vim` and `vi` all start it
 
 
 ### `systems/installer/`

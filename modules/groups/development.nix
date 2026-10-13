@@ -20,7 +20,6 @@ lib.mkIf (builtins.elem "development" osConfig.cakeos.groups) {
 
     jetbrains.idea
     gitkraken
-    inputs.nvf.packages.${pkgs.stdenv.hostPlatform.system}.default
     biome
     claude-code
     claude-monitor
