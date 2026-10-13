@@ -217,7 +217,12 @@ in
         markdown.enable = true;
         python.enable = true;
         rust.enable = true;
-        typescript.enable = true;
+        typescript = {
+          enable = true;
+          # Microsoft's native TypeScript server: typescript-language-server's pnpm deps hash
+          # is stale in nixpkgs, so it doesn't build.
+          lsp.servers = [ "typescript-go" ];
+        };
         css.enable = true;
         html.enable = true;
         json.enable = true;
