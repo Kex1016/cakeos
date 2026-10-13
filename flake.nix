@@ -52,6 +52,13 @@
         home-manager.follows = "home-manager";
       };
     };
+    # hecate's login screen (the shell's lock screen as a greetd greeter). It runs the
+    # same hecate and shell as the session, so it follows that input.
+    # Build against a local checkout with HECATE_GREETD_SRC=... ./build-vm.sh hecate.
+    hecate-greetd = {
+      url = "git+https://github.com/Kex1016/hecate-greetd";
+      inputs.hecate.follows = "hecate";
+    };
   };
 
   outputs =

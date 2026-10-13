@@ -192,6 +192,31 @@
         "type": "github"
       }
     },
+    "hecate-greetd": {
+      "inputs": {
+        "hecate": [
+          "hecate"
+        ],
+        "nixpkgs": [
+          "hecate-greetd",
+          "hecate",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791904549,
+        "narHash": "sha256-IItj0wLFEeuwQcw/TtmH7ANmI6S8h9YY4zmPz7V6oOU=",
+        "ref": "refs/heads/claude/hecate-greetd-implementation-6mcg2a",
+        "rev": "377bece6817cfdf66f61df141f9429f57df27be9",
+        "revCount": 1,
+        "type": "git",
+        "url": "https://github.com/Kex1016/hecate-greetd"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://github.com/Kex1016/hecate-greetd"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -478,6 +503,7 @@
         "disko": "disko",
         "flake-utils": "flake-utils",
         "hecate": "hecate",
+        "hecate-greetd": "hecate-greetd",
         "home-manager": "home-manager",
         "millennium": "millennium",
         "nix-cachyos-kernel": "nix-cachyos-kernel",

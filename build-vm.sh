@@ -98,6 +98,17 @@ if [ -n "${HECATE_SRC:-}" ]; then
         --exclude=".direnv" --exclude="*.qcow2" "$HECATE_SRC/" "$TEMP_DIR/hecate-src/"
     NIX_BUILD_ARGS+=( --override-input hecate "path:$TEMP_DIR/hecate-src" )
 fi
+# HECATE_GREETD_SRC=/path/to/hecate-greetd does the same for the login screen.
+if [ -n "${HECATE_GREETD_SRC:-}" ]; then
+    if [ ! -f "$HECATE_GREETD_SRC/flake.nix" ]; then
+        echo "HECATE_GREETD_SRC=$HECATE_GREETD_SRC has no flake.nix; point it at a hecate-greetd checkout."
+        exit 1
+    fi
+    echo "Using local hecate-greetd from $HECATE_GREETD_SRC..."
+    with_tool rsync rsync -a --exclude=".git" --exclude="target" --exclude="result*" \
+        --exclude=".direnv" "$HECATE_GREETD_SRC/" "$TEMP_DIR/hecate-greetd-src/"
+    NIX_BUILD_ARGS+=( --override-input hecate-greetd "path:$TEMP_DIR/hecate-greetd-src" )
+fi
 
 echo "Building the NixOS configuration: $TARGET..."
 
