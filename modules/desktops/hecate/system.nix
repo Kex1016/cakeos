@@ -52,7 +52,6 @@
       import ../gnome/apps.nix pkgs
       ++ (with pkgs; [
         kitty
-        foot
         wl-clipboard
         adwaita-icon-theme
       ]);
@@ -60,6 +59,22 @@
     # What those apps lean on outside GNOME: Seahorse and Disks' system bits,
     # gsettings (the shell sets the GTK theme and icons through it).
     programs = {
+      # The terminal. Colours come from the shell (it adds an include for them to
+      # ~/.config/foot/foot.ini, which in turn includes this system config).
+      foot = {
+        enable = true;
+        settings = {
+          main = {
+            font = "JetBrainsMono Nerd Font:size=12";
+            pad = "16x16";
+          };
+          scrollback.lines = 10000;
+          cursor = {
+            style = "beam";
+            blink = false;
+          };
+        };
+      };
       dconf.enable = true;
       seahorse.enable = true;
       gnome-disks.enable = true;
