@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   osConfig,
@@ -35,6 +36,9 @@
         # Touchpads keep adaptive. The shell's hecate settings page can
         # change both per session.
         input."type:pointer".accel_profile = "flat";
+        # Login splash pictures (wallpaper and shell, no windows) go where hecate-greetd's login
+        # screen can read them, so a login fades straight into the desktop.
+        splash.dir = "/var/lib/hecate-greetd/users/${config.home.username}/splash";
       };
     };
 
