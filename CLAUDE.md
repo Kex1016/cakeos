@@ -269,7 +269,7 @@ build/install-time tooling that must run before nushell is on the target.
   only when an input changed, evaluates every `gen-presets/` desktop before and after with
   `inspect.nix` (installed packages by name/version; every enabled `*.enable` and the
   `*.package` of every enabled module) and commits `flake.lock` as
-  "chore(flake): updated X packages and Y options", with the inputs, packages, options and new
+  "chore(flake): updated X inputs, Y packages and Z options", with the inputs, packages, options and new
   evaluation warnings in the body (`report.py`). An update that stops a preset from evaluating
   is not committed. `inspect.nix` only walks into modules whose `enable` is on, skips hidden
   (renamed) options and `hardware.nvidia`: unset defaults of other modules can fail in ways

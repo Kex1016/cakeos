@@ -5,7 +5,7 @@
 
 OLD_DIR and NEW_DIR hold one inspect.nix result per desktop preset (<preset>.json), for the
 configuration before and after the update. A preset that failed to evaluate has
-<preset>.error instead. The first line is the summary ("updated X packages and Y options");
+<preset>.error instead. The first line is the summary ("updated X inputs, Y packages and Z options");
 the body lists the inputs, packages, options and warnings that changed.
 """
 
@@ -96,6 +96,10 @@ def diff(old, new, presets):
     return lines
 
 
+def plural(n, word):
+    return f"{n} {word}{'s' * (n != 1)}"
+
+
 def section(title, lines):
     if not lines:
         return []
@@ -138,7 +142,8 @@ def main():
 
     n_pkg, n_opt = len(package_lines), len(option_lines)
     body = [
-        f"chore(flake): updated {n_pkg} package{'s' * (n_pkg != 1)} and {n_opt} option{'s' * (n_opt != 1)}",
+        f"chore(flake): updated {plural(len(input_lines), 'input')}, {plural(n_pkg, 'package')} and "
+        f"{plural(n_opt, 'option')}",
         "",
         f"{len(input_lines)} flake input{'s' * (len(input_lines) != 1)} changed. Packages and options are "
         f"compared across the desktop presets ({', '.join(compared) or 'none'}); a preset in "

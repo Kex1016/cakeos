@@ -1,7 +1,7 @@
 name: Update flake inputs
 
 # Updates flake.lock on main and commits it only when at least one input changed, as
-# "chore(flake): updated X packages and Y options" with the details in the body
+# "chore(flake): updated X inputs, Y packages and Z options" with the details in the body
 # (.github/flake-update/). Runs on every push to main, weekly, when hecate or hecate-greetd
 # publish a new commit (repository_dispatch from their own workflows), and by hand.
 #
