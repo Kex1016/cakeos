@@ -24,6 +24,8 @@
         border = {
           width = 2;
           radius = 12;
+          # Maximized windows keep their border and rounded corners (hecate's default drops both).
+          keep_on_maximize = true;
         };
         # Same layouts as the console and the other desktops (modules/system/core/locale.nix
         # splits cakeos.keyboardLayouts into these).
