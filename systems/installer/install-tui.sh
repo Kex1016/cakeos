@@ -761,14 +761,14 @@ NCPU=$(nproc 2>/dev/null || echo 1)
 (( BUILD_JOBS > NCPU )) && BUILD_JOBS=$NCPU
 NIX_CONF="max-jobs = $BUILD_JOBS"
 
-# The lantian cache only serves the CachyOS kernel, and Nix queries every
+# The CachyOS kernel's cache only serves that kernel, and Nix queries every
 # configured substituter for every path. Adding it unconditionally would slow
 # the whole install down for people who did not pick that kernel.
 if [ "$KERNEL" = "cachyos" ]; then
     NIX_CONF="$NIX_CONF
-extra-substituters = https://attic.xuyh0120.win/lantian
-extra-trusted-public-keys = lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
-    log "Added the lantian substituter for the CachyOS kernel"
+extra-substituters = https://cache.xinux.uz
+extra-trusted-public-keys = cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0="
+    log "Added the xinux substituter for the CachyOS kernel"
 fi
 
 export NIX_CONFIG="$NIX_CONF"

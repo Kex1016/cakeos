@@ -8,7 +8,7 @@
   # the target config does nothing during the install itself. Miss one here
   # and the affected packages get compiled from source on the target machine
   # — for `linuxPackages-cachyos-latest` that is a full kernel build.
-  # NOTE: the lantian cache is deliberately *not* here. Nix queries every
+  # NOTE: the CachyOS kernel cache is deliberately *not* here. Nix queries every
   # configured substituter for the narinfo of every path, so a slow one drags
   # down an entire install even when it serves nothing. That cache only holds
   # the CachyOS kernel, so it is added exactly where it is needed:
@@ -32,8 +32,8 @@
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
     ];
 
-    # The lantian cache 307-redirects NARs to third-party object storage whose
-    # throughput has been observed swinging between 4 MB/s and 15 KB/s.
+    # The CachyOS kernel caches have been slow (lantian's swung between 4 MB/s
+    # and 15 KB/s).
     #
     # `stalled-download-timeout` only fires when a transfer makes *no*
     # progress, so a merely slow cache is unaffected by it. 60s tolerates a

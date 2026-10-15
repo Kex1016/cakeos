@@ -174,6 +174,17 @@ def config-name [] {
     | first
 }
 
+# The binary caches the configuration being built declares, keys included. The
+# build has to use exactly these rather than add them to the running system's:
+# its nix.conf is the old CakeOS's, and a cache that one still lists may be dead
+# or no longer trusted (the CachyOS kernel's lantian cache was dropped after it
+# was compromised).
+def target-caches [config: string] {
+    (^nix eval --json $"($config).config.nix.settings"
+        --apply 's: { substituters = (s.substituters or []) ++ (s.extra-substituters or []); keys = (s.trusted-public-keys or []) ++ (s.extra-trusted-public-keys or []); }'
+    | from json)
+}
+
 def rebuild [mode: string] {
     let name = (config-name)
     if ($name | is-empty) {
@@ -181,7 +192,10 @@ def rebuild [mode: string] {
     }
     print $"==> Rebuilding the system \(nixos-rebuild ($mode), configuration ($name)\)..."
     cd $TARGET_DIR
-    ^nixos-rebuild $mode --flake $".#($name)"
+    let caches = (target-caches $".#nixosConfigurations.($name)")
+    (^nixos-rebuild $mode --flake $".#($name)"
+        --option substituters ($caches.substituters | str join " ")
+        --option trusted-public-keys ($caches.keys | str join " "))
     print "==> Rebuild completed successfully."
 }
 

@@ -51,7 +51,7 @@
         Which kernel to boot.
 
         - `latest`  newest mainline (pkgs.linuxPackages_latest)
-        - `cachyos` scheduler-patched build; needs the lantian binary cache
+        - `cachyos` scheduler-patched build; needs the cache.xinux.uz binary cache
         - `lts`     long-term support (pkgs.linuxPackages), most conservative
 
         The mapping lives in systems/cakeos/configuration.nix.
