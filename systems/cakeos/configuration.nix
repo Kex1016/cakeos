@@ -46,10 +46,10 @@
   # enough that merely having it configured costs real time on every narinfo
   # query. Pull it in only when that kernel was actually chosen.
   nix.settings.extra-substituters = lib.mkIf (config.cakeos.kernel == "cachyos") [
-    "https://attic.xuyh0120.win/lantian"
+    "https://cache.xinux.uz"
   ];
   nix.settings.extra-trusted-public-keys = lib.mkIf (config.cakeos.kernel == "cachyos") [
-    "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
+    "cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0="
   ];
 
   services.flatpak.enable = true;
