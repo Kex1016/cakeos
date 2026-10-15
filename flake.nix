@@ -41,7 +41,10 @@
     };
     nix-flatpak.url = "github:gmodena/nix-flatpak";
     spicetify-nix.url = "github:Gerg-L/spicetify-nix";
-    millennium.url = "github:SteamClientHomebrew/Millennium/next?dir=packages/nix";
+    # Pinned to the last revision that built: from 3.6.1 on, its bun-deps
+    # fixed-output derivation hashes differently on different machines
+    # (SteamClientHomebrew/Millennium#934). Back to `next` once that is fixed.
+    millennium.url = "github:SteamClientHomebrew/Millennium/e5b683318ac458fab86317e1b3ffcd0aea39d3ff?dir=packages/nix";
     # The hecate compositor and its bundled shell (modules/desktops/hecate).
     # git+https rather than github: so a private repo is fetched with git's own
     # credentials (the github: tarball fetcher is anonymous and gets a 404).
