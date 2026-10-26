@@ -11,6 +11,7 @@ in
     ../../modules/home/apps/cli.nix
     ../../modules/home/apps/essentials.nix
     ../../modules/home/apps/extras.nix
+    ../../modules/home/apps/affinity.nix
     ../../modules/home/editor/cakevim.nix
     ../../modules/home/shell/nushell.nix
     ../../modules/home/shell/ssh.nix

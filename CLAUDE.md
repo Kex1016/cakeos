@@ -161,6 +161,11 @@ import everything unconditionally and let the install-time choice decide.
 - `modules/system/apps/` — optional system services gated on `cakeos.groups`/`cakeos.hardware`
   (steam, ntsync, gaming tweaks, vpn, tablet, librepods)
 - `modules/home/apps/` — always-on user packages (browsers, cli, essentials, extras)
+- `modules/home/apps/affinity.nix` — Affinity v3 under Wine (`pkgs.affinity-v3`, from the
+  `affinity-nix` input's overlay in `flake.nix`), off unless `cakeos.affinity.enable = true`
+  (declared in `modules/cakeos/affinity.nix`, which also adds upstream's cache.forall.systems
+  substituter for their patched Wine; set it by hand in `gen/<config>.nix`, the installer
+  doesn't ask)
 - `modules/home/shell/` — nushell + ssh. Nushell is the default login shell
   (`users.defaultUserShell` in `system.nix`, listed in `environment.shells` so the display
   manager lists the user)

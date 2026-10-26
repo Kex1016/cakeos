@@ -39,6 +39,12 @@
         home-manager.follows = "home-manager";
       };
     };
+    # Affinity v3 under Wine (modules/home/apps/affinity.nix, behind cakeos.affinity.enable).
+    # Only its overlay is used, which builds against our nixpkgs.
+    affinity-nix = {
+      url = "github:mrshmllow/affinity-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nix-flatpak.url = "github:gmodena/nix-flatpak";
     spicetify-nix.url = "github:Gerg-L/spicetify-nix";
     # Pinned to the last revision that built: from 3.6.1 on, its bun-deps
@@ -83,6 +89,7 @@
           inputs.nur.overlays.default
           inputs.nix-cachyos-kernel.overlays.pinned
           inputs.millennium.overlays.default
+          inputs.affinity-nix.overlays.default
         ];
       };
 

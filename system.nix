@@ -4,6 +4,7 @@
     ./modules/cakeos/install-options.nix
     ./modules/cakeos/substituters.nix
     ./modules/cakeos/mainframe.nix
+    ./modules/cakeos/affinity.nix
   ];
 
   boot.loader.limine.enable = true;
