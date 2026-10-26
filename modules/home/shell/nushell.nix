@@ -15,6 +15,8 @@
 
   programs.nushell = {
     enable = true;
+    # Keep the pre-26.11 default (and silence its warning).
+    loadSessionVariables = false;
 
     settings = {
       show_banner = false;
