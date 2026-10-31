@@ -28,8 +28,23 @@ const VERSION_FILE = ".cakeos-version"
 # set (the flake package's wrapper sets it).
 const LATEST = "github:Kex1016/cakeos#update-cakeos"
 
-def --wrapped run-latest [...args: string] {
+#
+# With --fallback, a handover that fails carries on with this copy instead of exiting.
+# `check` runs as the user, and evaluating the flake fetches the private hecate inputs,
+# which needs a GitHub token that user's Nix may not have (root's may).
+def --wrapped run-latest [--fallback, ...args: string] {
     if ($env.CAKEOS_UPDATER_LATEST? | is-not-empty) {
+        return
+    }
+    if $fallback {
+        # Nix's own errors stay on stderr; the updater's answer is its stdout.
+        let result = (^nix --extra-experimental-features "nix-command flakes" run --refresh $LATEST -- ...$args | complete)
+        if $result.exit_code == 0 or ($result.stdout | is-not-empty) {
+            print --raw $result.stdout
+            exit $result.exit_code
+        }
+        print --stderr $result.stderr
+        print --stderr "!!! Could not run the latest updater (no GitHub token for the private inputs?); using the installed one."
         return
     }
     let code = try {
@@ -203,7 +218,7 @@ def rebuild [mode: string] {
 def "main check" [
     --json # machine-readable, for the desktop shell's update checker
 ] {
-    run-latest check ...(if $json { [--json] } else { [] })
+    run-latest --fallback check ...(if $json { [--json] } else { [] })
     let status = try { check-status } catch { |e|
         if $json {
             print ({ error: $e.msg } | to json -r)
