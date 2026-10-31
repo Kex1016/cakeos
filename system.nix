@@ -143,9 +143,13 @@
     "flakes"
   ];
   
+  # The GitHub token for the private hecate inputs. Flakes are fetched by the nix
+  # client, not the daemon, and an unreadable `!include` is skipped silently, so a
+  # root-only file leaves every non-root `nix` call (the update check) anonymous.
   nix.extraOptions = ''
     !include /etc/nix/access-tokens.conf
   '';
+  systemd.tmpfiles.rules = [ "z /etc/nix/access-tokens.conf 0640 root wheel - -" ];
 
   services.avahi = {
     enable = true;
