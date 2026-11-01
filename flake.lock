@@ -290,11 +290,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793528823,
-        "narHash": "sha256-cj9qH+CladXLkSp/djnLRef04gPcvXdOJykISuyinSU=",
+        "lastModified": 1793536919,
+        "narHash": "sha256-wGpijnqNCIAP/gB+goubIKTEMbNXPbYJYwOexMy7++0=",
         "owner": "Kex1016",
         "repo": "hecate-greetd",
-        "rev": "44edc6942cd5580969245b94527a6cb57b2ad5e3",
+        "rev": "25e1ad0d31800d3f394875fe149d0e13a03e2f56",
         "type": "github"
       },
       "original": {
@@ -539,11 +539,11 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1792773339,
-        "narHash": "sha256-17eNBI5Khe4JZaRkL5hRGPWf8MZ6qv+bWAr4V8YeKBw=",
-        "rev": "3ec636362e1816bc2f0888fa0fa2c69f1bc9e504",
+        "lastModified": 1793341285,
+        "narHash": "sha256-LOv16TsMYV2/8BUYnhSxHkOASe7es2ORbqMeLlZJ8Hc=",
+        "rev": "1c89083e451e891152365b799595cf7790a43325",
         "type": "tarball",
-        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1100280.3ec636362e18/nixexprs.tar.xz"
+        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1105037.1c89083e451e/nixexprs.tar.xz"
       },
       "original": {
         "type": "tarball",
@@ -558,11 +558,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793528872,
-        "narHash": "sha256-LYmerdohYQWiOXOoCrQLCuBpjwZouv09pj9WsO+gdl0=",
+        "lastModified": 1793536530,
+        "narHash": "sha256-vwt+vklPYg+Pl34rKNHndGZbuUceUgAwD6zsir/ISEI=",
         "owner": "nix-community",
         "repo": "NUR",
-        "rev": "bcf770d126b37ab3d4000effa4a3a84f7fcca6bd",
+        "rev": "56c76830fd71955f9e791573ef8fd1cb950e6798",
         "type": "github"
       },
       "original": {
@@ -651,11 +651,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1792919014,
-        "narHash": "sha256-gJ8uPmQFhJ98X+VWPpD+o0tnQ0nJjbG+Z3QDHcSJKw0=",
+        "lastModified": 1793531264,
+        "narHash": "sha256-rbmfLn4/UWs1mrMJgMEJXMfdhN7o7i++c5jPtUdlP+8=",
         "owner": "Gerg-L",
         "repo": "spicetify-nix",
-        "rev": "f6eb8135c060130150c8fbcc6b7cf5e22e5179d8",
+        "rev": "d818ab64010272bc0072d0c325838a63038796e9",
         "type": "github"
       },
       "original": {
