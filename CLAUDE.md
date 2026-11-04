@@ -158,6 +158,9 @@ import everything unconditionally and let the install-time choice decide.
 ### Remaining shared modules (`modules/`)
 
 - `modules/system/core/` — locale/keyboard, boot splash, fonts, low-level fixes
+  - `limine-theme.nix` themes the installed system's Limine menu from the shared `theme/`
+    palette (wallpaper, terminal palette, branding). Everything is `mkDefault`, and
+    `cakeos.limine.wallpaper` swaps the wallpaper
 - `modules/system/apps/` — optional system services gated on `cakeos.groups`/`cakeos.hardware`
   (steam, ntsync, gaming tweaks, vpn, tablet, librepods)
 - `modules/home/apps/` — always-on user packages (browsers, cli, essentials, extras)
@@ -194,6 +197,20 @@ import everything unconditionally and let the install-time choice decide.
   rounded boxes as pixmap slices. GRUB pads a box's content by its edge pieces, so the pills
   (selection, timeout bar, scrollbar) only have side (or end) pieces. GRUB's PNG loader
   rejects palette PNGs, hence `png32:`/`png24:`.
+- `gui.nix` + `gui/` are the graphical installer, which is what tty1 starts: a Quickshell app
+  (`gui/shell.qml`) in `cage`, styled after the hecate shell's settings window (nav rail,
+  Material You roles from a colors.json in the shell's own format, Rubik + Material Symbols)
+  over the wallpaper from `theme/`. `cake-install-gui` launches it, retries with pixman and
+  Qt's software renderer when GL fails (a VM without virgl), and falls back to the TUI if it
+  still cannot start. Its "Text installer" and "Open a shell" buttons hand over to the TUI or
+  leave a prompt. `CAKEOS_COLORS=<colors.json>` / `CAKEOS_WALLPAPER` restyle it, e.g. with a
+  running shell's `~/.local/state/quickshell/user/generated/colors.json`.
+- `backend.sh` (`/etc/cake-install-backend.sh`) is what both installers share: `probe` (disks,
+  desktops, RAM, network as JSON), `timezones`, `mainframe`, `wifi-scan`/`wifi-connect`, and
+  `install <answers.json>`, which does the disko -> flake copy -> `gen/` -> `nixos-install`
+  part described below. Written for a terminal it prints readable lines; otherwise
+  `::stage`/`::error`/`::crash` markers the GUI parses. The answers file carries plain-text
+  passwords and is deleted as soon as it is read.
 - `install-tui.sh` is a `gum`-driven TUI (no `dialog`): centred block logo, one step per screen.
   It walks disk -> desktop -> identity -> localisation -> package groups -> storage/kernel
   -> review. The desktop menu is built from the `cakeosDesktops` flake output, partitions via `disko-config.nix` (parameterized by disk + swap size via
@@ -217,6 +234,15 @@ import everything unconditionally and let the install-time choice decide.
   evaluate outside the installer; the TUI overwrites it on the target with real values.
 - `user-settings.nix` is a similar checked-in stub for `universe`'s identity, overridden by real
   `gen/` values post-install.
+
+### `theme/`
+
+The CakeOS palette and default wallpaper, for everything that themes itself outside the hecate
+shell (the installer, the boot loaders). `palette.nix` is plain Nix: a `seed` and every Material
+You role (matugen tonal spot, dark), named like the shell's generated `colors.json`.
+`theme/update-palette.sh [#rrggbb]` regenerates it. `import ./theme { inherit pkgs; }` adds
+`colorsJson` and `wallpaper`, a 3840x2160 PNG of Material shapes drawn from the palette by
+`wallpaper.py`.
 
 ### Scripts
 
