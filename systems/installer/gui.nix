@@ -34,8 +34,21 @@ let
         cage -s -d -m last -- quickshell --no-duplicate -p ${gui}/shell.qml >> /var/log/cake-installer-gui.log 2>&1
       }
 
+      # tty1 can log in before the GPU driver has loaded.
+      has_drm() {
+        local card
+        for card in /dev/dri/card*; do
+          [ -e "$card" ] && return 0
+        done
+        return 1
+      }
+      for _ in $(seq 1 10); do
+        has_drm && break
+        sleep 1
+      done
+
       status=0
-      if compgen -G "/dev/dri/card*" >/dev/null; then
+      if has_drm; then
         start=$(date +%s)
         gui || status=$?
         # No usable GL (a VM without virgl, an unsupported GPU): draw in software.
