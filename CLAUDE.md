@@ -158,6 +158,9 @@ import everything unconditionally and let the install-time choice decide.
 ### Remaining shared modules (`modules/`)
 
 - `modules/system/core/` — locale/keyboard, boot splash, fonts, low-level fixes
+  - `limine-theme.nix` themes the installed system's Limine menu from the shared `theme/`
+    palette (wallpaper, terminal palette, branding). Everything is `mkDefault`, and
+    `cakeos.limine.wallpaper` swaps the wallpaper
 - `modules/system/apps/` — optional system services gated on `cakeos.groups`/`cakeos.hardware`
   (steam, ntsync, gaming tweaks, vpn, tablet, librepods)
 - `modules/home/apps/` — always-on user packages (browsers, cli, essentials, extras)
