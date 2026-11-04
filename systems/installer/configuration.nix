@@ -33,6 +33,10 @@ in
     source = ./install-tui.sh;
     mode = "0755";
   };
+  environment.etc."cake-install-backend.sh" = {
+    source = ./backend.sh;
+    mode = "0755";
+  };
   environment.etc."disko-config.nix" = {
     source = ./disko-config.nix;
     mode = "0444";
