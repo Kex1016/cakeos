@@ -189,9 +189,14 @@ import everything unconditionally and let the install-time choice decide.
   via getty. On any abnormal exit the script touches `/run/cakeos-installer-stopped`, which stops
   the next login from auto-starting it; `cake-install` clears the flag and relaunches, and a
   reboot clears it too since it lives on `/run`.
-- `theme.nix` builds the ISO look: a generated pink/purple gradient used as both the GRUB theme
-  background and the BIOS splash, a matching 16-colour console palette, and root's prompt.
-  The GRUB theme deliberately ships no custom font so GRUB falls back to its built-in one.
+- `theme.nix` builds the ISO look from the shared Material You palette and wallpaper in
+  `theme/`: the GRUB theme (`grub-theme.nix`), the 800x600 syslinux splash and menu colours
+  for BIOS boot, a 16-colour console palette, and root's prompt. `grub-theme.nix` renders
+  Rubik / JetBrains Mono to `.pf2` (GRUB matches fonts by their exact
+  "<family> Regular <size>" name), Material Symbols icons per menu entry `--class`, and the
+  rounded boxes as pixmap slices. GRUB pads a box's content by its edge pieces, so the pills
+  (selection, timeout bar, scrollbar) only have side (or end) pieces. GRUB's PNG loader
+  rejects palette PNGs, hence `png32:`/`png24:`.
 - `gui.nix` + `gui/` are the graphical installer, which is what tty1 starts: a Quickshell app
   (`gui/shell.qml`) in `cage`, styled after the hecate shell's settings window (nav rail,
   Material You roles from a colors.json in the shell's own format, Rubik + Material Symbols)
