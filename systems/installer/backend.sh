@@ -40,7 +40,12 @@ swap_default() {
     fi
 }
 
-online() { ping -q -c 1 -W 3 1.1.1.1 >/dev/null 2>&1; }
+# ICMP is often filtered (and never passes QEMU's user networking), so also try
+# the binary cache itself.
+online() {
+    ping -q -c 1 -W 3 1.1.1.1 >/dev/null 2>&1 \
+        || timeout 5 bash -c '</dev/tcp/cache.nixos.org/443' 2>/dev/null
+}
 
 wifi_device() { iw dev 2>/dev/null | awk '$1=="Interface"{print $2}' | head -n 1; }
 
@@ -98,6 +103,10 @@ cmd_mainframe() {
 }
 
 cmd_wifi_scan() {
+    if command -v nmcli >/dev/null; then
+        nmcli --terse --fields SSID device wifi list --rescan yes 2>/dev/null | grep -v '^$' | sort -u
+        return 0
+    fi
     local device
     device=$(wifi_device)
     [ -n "$device" ] || return 1
@@ -108,6 +117,17 @@ cmd_wifi_scan() {
 cmd_wifi_connect() {
     local ssid="$1" pass device
     IFS= read -r pass || true
+    # The ISO runs NetworkManager, which a hand-started wpa_supplicant fights.
+    if command -v nmcli >/dev/null; then
+        nmcli device wifi connect "$ssid" password "$pass" >> "$LOG_FILE" 2>&1 \
+            || { echo "Could not connect to $ssid." >&2; return 1; }
+        for _ in $(seq 1 15); do
+            online && return 0
+            sleep 1
+        done
+        echo "Connected to $ssid, but there is no internet." >&2
+        return 1
+    fi
     device=$(wifi_device)
     [ -n "$device" ] || { echo "No WiFi adapter found." >&2; return 1; }
     wpa_passphrase "$ssid" "$pass" > /etc/wpa_supplicant.conf
