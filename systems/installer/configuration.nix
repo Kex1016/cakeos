@@ -11,6 +11,7 @@ in
 {
   imports = [
     ./theme.nix
+    ./gui.nix
     ../../modules/cakeos/substituters.nix
   ];
 
@@ -64,13 +65,14 @@ in
       if [[ -e /run/cakeos-installer-stopped ]]; then
         echo
         echo "The installer exited earlier, so it was not started again."
-        echo "Run it with:  cake-install"
+        echo "Run it with:  cake-install-gui  (or cake-install for the text one)"
         echo
       else
         # Deliberately not `exec`: the installer has to be able to return
         # here, otherwise "drop to a shell" just respawns it through getty
-        # instead of landing on a prompt.
-        /etc/cake-install.sh || true
+        # instead of landing on a prompt. The graphical installer falls back
+        # to the text one by itself.
+        cake-install-gui || true
       fi
     fi
   '';
