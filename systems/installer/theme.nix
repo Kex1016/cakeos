@@ -1,99 +1,42 @@
 { pkgs, lib, ... }:
 
 let
-  # CakeOS palette
-  pink = "ff47c8";
-  pinkDim = "c43a9e";
-  purple = "7d3cc4";
-  violetBg = "140a1c";
-  violetBg2 = "2a1038";
-  text = "e6d8f2";
+  theme = import ../../theme { inherit pkgs; };
+  c = theme.colors;
+  argb = colour: "#ff${lib.removePrefix "#" colour}";
 
-  # Gradient backdrop shared by the GRUB menu and the BIOS splash. Generated
-  # rather than committed so the repo stays free of binaries.
-  background =
-    pkgs.runCommand "cakeos-boot-background.png"
-      {
-        nativeBuildInputs = [ pkgs.imagemagick ];
-      }
-      ''
-        magick -size 1920x1080 \
-          gradient:'#${violetBg2}'-'#${violetBg}' \
-          -fill '#${purple}' -colorize 8% \
-          png32:$out
-      '';
-
-  # A deliberately minimal GRUB theme: no custom font, so GRUB falls back to
-  # its built-in one and there is nothing to mismatch. Colours and the
-  # background do all the work.
-  grubTheme =
-    pkgs.runCommand "cakeos-grub-theme"
-      {
-        nativeBuildInputs = [ pkgs.imagemagick ];
-      }
-      ''
-        mkdir -p $out
-        cp ${background} $out/background.png
-
-        cat > $out/theme.txt <<'THEME'
-        # CakeOS
-        desktop-image: "background.png"
-        desktop-color: "#${violetBg}"
-        title-text: ""
-        message-color: "#${text}"
-        terminal-border: "0"
-
-        + label {
-            top = 22%
-            left = 0
-            width = 100%
-            height = 40
-            text = "CakeOS"
-            align = "center"
-            color = "#${pink}"
-        }
-
-        + label {
-            top = 27%
-            left = 0
-            width = 100%
-            height = 24
-            text = "installer"
-            align = "center"
-            color = "#${pinkDim}"
-        }
-
-        + boot_menu {
-            left = 25%
-            width = 50%
-            top = 38%
-            height = 40%
-            item_color = "#${text}"
-            selected_item_color = "#${pink}"
-            item_height = 28
-            item_spacing = 6
-            item_padding = 4
-        }
-
-        + progress_bar {
-            id = "__timeout__"
-            left = 30%
-            width = 40%
-            top = 82%
-            height = 16
-            show_text = true
-            text_color = "#${pinkDim}"
-            fg_color = "#${pink}"
-            bg_color = "#${violetBg2}"
-            border_color = "#${purple}"
-        }
-        THEME
-      '';
+  # Syslinux draws its splash only at exactly the menu's 800x600.
+  splash = pkgs.runCommand "cakeos-boot-splash.png" { nativeBuildInputs = [ pkgs.imagemagick ]; } ''
+    magick ${theme.wallpaper} -resize x600 -gravity center -extent 800x600 png24:$out
+  '';
 in
 {
   isoImage = {
-    grubTheme = grubTheme;
-    splashImage = background;
+    grubTheme = import ./grub-theme.nix { inherit pkgs theme; };
+    splashImage = splash;
+    syslinuxTheme = ''
+      MENU TITLE CakeOS
+      MENU RESOLUTION 800 600
+      MENU CLEAR
+      MENU ROWS 6
+      MENU CMDLINEROW -4
+      MENU TIMEOUTROW -3
+      MENU TABMSGROW  -2
+      MENU HELPMSGROW -1
+      MENU HELPMSGENDROW -1
+      MENU MARGIN 0
+
+      MENU COLOR BORDER 30;44 #00000000 #00000000 none
+      MENU COLOR SCREEN 37;40 ${argb c.on_surface} #00000000 none
+      MENU COLOR TABMSG 31;40 ${argb c.outline} #00000000 none
+      MENU COLOR TIMEOUT 1;37;40 ${argb c.on_surface_variant} #00000000 none
+      MENU COLOR TIMEOUT_MSG 37;40 ${argb c.on_surface_variant} #00000000 none
+      MENU COLOR CMDMARK 1;36;40 ${argb c.primary} #00000000 none
+      MENU COLOR CMDLINE 37;40 ${argb c.on_surface} #00000000 none
+      MENU COLOR TITLE 1;36;44 ${argb c.primary} #00000000 none
+      MENU COLOR UNSEL 37;44 ${argb c.on_surface} #00000000 none
+      MENU COLOR SEL 7;37;40 ${argb c.on_secondary_container} ${argb c.secondary_container} none
+    '';
     volumeID = lib.mkForce "CAKEOS";
   };
 
