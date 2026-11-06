@@ -89,8 +89,10 @@ one into a temp `gen/cakeos.nix` before building.
   `update-cakeos` derives the flake attr from that filename.
 - `mkHost <genName>` passes `genName` via `specialArgs`, which is how the host config knows which
   `gen/` files to import.
-- `cakeosDesktops` is a flake output listing the available desktops; the installer reads it with
-  `nix eval --json .#cakeosDesktops` to build its menu.
+- `cakeosDesktops` is a flake output listing the available desktops (`modules/desktops/list.nix`).
+  The installers read that file directly (`nix eval --json --file .../list.nix`), not the flake
+  output: evaluating the flake fetches inputs, which fails offline and for the private hecate
+  inputs (the ISO has no GitHub credentials).
 - `commonSystemModules` are shared by every host: disko, home-manager, spicetify, `system.nix`.
   `installer` does not use them — it is built on `installation-cd-base.nix` + disko.
 
@@ -213,7 +215,7 @@ import everything unconditionally and let the install-time choice decide.
   passwords and is deleted as soon as it is read.
 - `install-tui.sh` is a `gum`-driven TUI (no `dialog`): centred block logo, one step per screen.
   It walks disk -> desktop -> identity -> localisation -> package groups -> storage/kernel
-  -> review. The desktop menu is built from the `cakeosDesktops` flake output, partitions via `disko-config.nix` (parameterized by disk + swap size via
+  -> review. The desktop menu is built from `modules/desktops/list.nix`, partitions via `disko-config.nix` (parameterized by disk + swap size via
   `--argstr`), copies the flake to `/mnt/etc/cakeos`, generates hardware config into
   `gen/<config>-hardware.nix`, writes every answer into `gen/<config>.nix`, then runs
   `nixos-install --flake /mnt/etc/cakeos#<config>`.
