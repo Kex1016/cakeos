@@ -66,7 +66,10 @@ disks_json() {
 
 desktops_json() {
     local d desc
-    nix eval --json "$FLAKE_URL#cakeosDesktops" 2>/dev/null | jq -r '.[]' | while read -r d; do
+    # list.nix is plain builtins, so it evaluates offline and without fetching
+    # any flake input (going through the flake would fetch the private hecate
+    # inputs, which the ISO has no credentials for).
+    nix eval --json --file "$FLAKE_URL/modules/desktops/list.nix" 2>/dev/null | jq -r '.[]' | while read -r d; do
         desc=$(nix eval --raw --impure \
             --expr "(import $FLAKE_URL/modules/desktops/$d/meta.nix).description" 2>/dev/null) || desc=""
         jq -n --arg name "$d" --arg description "$desc" '{ name: $name, description: $description }'

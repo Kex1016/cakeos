@@ -390,11 +390,13 @@ SELECTED_CONFIG="cakeos"
 
 screen "Desktop"
 
-# The flake exposes the list of desktops, discovered from the directories in
-# modules/desktops/. A new desktop shows up here with no change to this script.
+# The desktops are discovered from the directories in modules/desktops/ (the
+# same list the flake exposes as cakeosDesktops). A new desktop shows up here
+# with no change to this script. list.nix is read directly rather than through
+# the flake: it is plain builtins, so it works offline and fetches no inputs.
 mapfile -t DESKTOPS < <(
     gum spin --spinner dot --title "Reading available desktops from the flake..." --show-output -- \
-        nix eval --json "$FLAKE_URL#cakeosDesktops" 2>/dev/null | jq -r '.[]'
+        nix eval --json --file "$FLAKE_URL/modules/desktops/list.nix" 2>/dev/null | jq -r '.[]'
 )
 [ ${#DESKTOPS[@]} -gt 0 ] || die "No desktop environments found in $FLAKE_URL/modules/desktops."
 
