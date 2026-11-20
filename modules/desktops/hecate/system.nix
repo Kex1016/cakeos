@@ -72,13 +72,13 @@
     };
 
     # librepods runs through a cap_net_admin wrapper only its group may execute
-    # (modules/system/apps/librepods.nix turns it on with cakeos.hardware "airpods"),
-    # and the shell's AirPods widgets start it.
+    # (modules/system/apps/librepods.nix turns it on with cakeos.hardware "airpods").
+    # The shell starts it once AirPods are switched on in its settings (off by default).
     users.users.${config.cakeos.primaryUser}.extraGroups =
       lib.optional (builtins.elem "airpods" config.cakeos.hardware) "librepods";
 
-    # Qt apps pick up the KDE platform theme (file dialogs, colours from the
-    # shell's kdeglobals) and find the plugins of everything installed system-wide.
+    # Qt apps pick up the KDE platform theme (file dialogs, haiiro colours from
+    # kdeglobals) and find the plugins of everything installed system-wide.
     # Home Manager sets the same theme per user (programs.hecate.shell.theming.qt).
     qt = {
       enable = true;
@@ -94,13 +94,14 @@
     ];
 
     programs = {
-      # Colours come from the shell (it adds an include for them to
-      # ~/.config/foot/foot.ini, which in turn includes this system config).
+      # Colours and the haiiro face come from hecate's foot template: the user's
+      # ~/.config/foot/foot.ini (seeded once) includes this system config, then
+      # ~/.config/foot/haiiro.ini.
       foot = {
         enable = true;
         settings = {
           main = {
-            # Whatever fontconfig's monospace is, so the haiiro stack applies here too.
+            # fontconfig's monospace, which is the haiiro mono stack under hecate (below).
             font = "monospace:size=12";
             pad = "16x16";
           };
@@ -121,6 +122,14 @@
     # apps run inside them all agree. It runs last (99) and only when VGA is the
     # first family asked for, so a font stack that merely falls back to it keeps
     # its own bold. The shell loads its own copies of the fonts and is unaffected.
+    # `monospace` is the haiiro mono stack first (hecate-greetd installs the faces
+    # system-wide; the user's fontconfig puts the same stack first for their apps).
+    fonts.fontconfig.defaultFonts.monospace = lib.mkBefore [
+      "IBM VGA 8x16"
+      "Unifont"
+      "Unifont Upper"
+    ];
+
     fonts.fontconfig.confPackages = [
       (pkgs.writeTextDir "etc/fonts/conf.d/99-haiiro-vga-regular-bold.conf" ''
         <?xml version="1.0"?>
