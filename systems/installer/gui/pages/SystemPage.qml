@@ -2,60 +2,74 @@ import QtQuick
 import QtQuick.Layouts
 import qs
 import qs.components
+import qs.modules.common.widgets.haiiro as H
 
 Page {
-    title: "System"
-    subtitle: "Swap, kernel and what lives in RAM. Detected " + Installer.ramGb + " GB of memory."
+    id: page
 
-    Section {
-        title: "Swap"
-        icon: "swap_horiz"
+    readonly property var kernel: Installer.kernelChoices.find(k => k.id === Installer.kernel) ?? Installer.kernelChoices[0]
 
-        TextField {
-            Layout.topMargin: 8
-            label: "Swap size"
-            text: Installer.swapSize
-            onTextChanged: Installer.swapSize = text.toUpperCase()
-            hint: "A number followed by G or M, such as 16G."
-            error: Installer.swapValid ? "" : "Use a size like 16G or 512M."
-        }
+    label: "cat system.nix"
+
+    Line {
+        ink: "rose"
+        text: "The machine has " + Installer.ramGb + " GB of memory. A few things depend on that."
     }
 
-    Section {
-        title: "Kernel"
-        icon: "memory"
+    Columns {
+        Half {
+            Heading {
+                text: "swap"
+            }
+            H.SettingRow {
+                Layout.fillWidth: true
+                name: "swap partition"
+                description: "Its own partition on the same disk. The default is picked from your memory."
+                H.Spin {
+                    value: parseInt(Installer.swapSize) || 1
+                    from: 1
+                    to: 256
+                    text: Installer.swapSize
+                    onMoved: v => Installer.swapSize = v + "G"
+                }
+            }
 
-        Repeater {
-            model: Installer.kernelChoices
-            ChoiceCard {
-                required property var modelData
-                icon: modelData.icon
-                title: modelData.name
-                description: modelData.description
-                selected: Installer.kernel === modelData.id
-                onClicked: Installer.kernel = modelData.id
+            Heading {
+                text: "kernel"
+            }
+            H.SettingRow {
+                Layout.fillWidth: true
+                name: "kernel"
+                description: page.kernel.description + "."
+                H.Segmented {
+                    model: Installer.kernelChoices.map(k => k.name)
+                    currentIndex: Math.max(0, Installer.kernelChoices.findIndex(k => k.id === Installer.kernel))
+                    onActivated: i => Installer.kernel = Installer.kernelChoices[i].id
+                }
             }
         }
-    }
+        Half {
+            ColumnLayout {
+                Layout.fillWidth: true
+                visible: Installer.ramGb > 16
+                spacing: 0
 
-    Section {
-        visible: Installer.ramGb > 16
-        title: "Memory-backed directories"
-        icon: "speed"
-
-        SwitchRow {
-            icon: "folder_zip"
-            title: "/tmp and /var/cache on tmpfs"
-            description: "Faster, and less wear on the disk."
-            checked: Installer.tmpfsTmp
-            onToggled: c => Installer.tmpfsTmp = c
-        }
-        SwitchRow {
-            icon: "settings_backup_restore"
-            title: "/etc on tmpfs"
-            description: "Impermanence: /etc is rebuilt from the configuration at every boot. Needs about 1 GB of RAM."
-            checked: Installer.tmpfsEtc
-            onToggled: c => Installer.tmpfsEtc = c
+                Heading {
+                    text: "memory"
+                }
+                Toggle {
+                    name: "/tmp and /var/cache in RAM"
+                    description: "Faster, and less wear on the disk."
+                    checked: Installer.tmpfsTmp
+                    onToggled: c => Installer.tmpfsTmp = c
+                }
+                Toggle {
+                    name: "/etc in RAM"
+                    description: "Impermanence: /etc is rebuilt from the configuration at every boot. Needs about 1 GB of RAM."
+                    checked: Installer.tmpfsEtc
+                    onToggled: c => Installer.tmpfsEtc = c
+                }
+            }
         }
     }
 }

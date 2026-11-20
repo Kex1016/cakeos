@@ -2,41 +2,52 @@ import QtQuick
 import QtQuick.Layouts
 import qs
 import qs.components
+import qs.modules.common.widgets.haiiro as H
 
 Page {
-    title: "Disk"
-    subtitle: "Where CakeOS goes. USB drives and disks under 50 GB are not listed."
+    label: "lsblk"
+    note: "USB drives and disks under 50 GB are left out"
 
-    Notice {
-        kind: "warning"
-        text: "Everything on the selected disk will be erased."
+    Line {
+        ink: "rose"
+        text: "Pick the disk CakeOS will live on."
+    }
+    Line {
+        ink: "love"
+        text: "Everything on it is erased."
     }
 
-    Section {
-        title: "Target disk"
-        icon: "hard_drive"
-
-        StyledText {
-            visible: Installer.probing
-            text: "Looking for disks..."
-            color: Theme.subtext
-        }
-        Notice {
-            visible: !Installer.probing && Installer.disks.length === 0
-            kind: "error"
-            text: "No suitable disk found. CakeOS needs a non-USB disk of at least 50 GB."
-        }
-        Repeater {
-            model: Installer.disks
-            ChoiceCard {
-                required property var modelData
-                icon: "hard_drive"
-                title: modelData.model
-                description: modelData.path
-                trailing: modelData.size
-                selected: Installer.disk === modelData.path
-                onClicked: Installer.disk = modelData.path
-            }
+    Heading {
+        text: "disks"
+    }
+    Line {
+        visible: Installer.probing
+        ink: "subtle"
+        text: "Looking for disks…"
+    }
+    Line {
+        visible: !Installer.probing && Installer.disks.length === 0
+        ink: "love"
+        text: "No disk fits. CakeOS needs a disk of at least 50 GB that is not a USB drive."
+    }
+    ChoiceList {
+        id: list
+        model: Installer.disks.map(d => ({
+                    key: d.path,
+                    title: d.model,
+                    description: d.path,
+                    meta: d.size
+                }))
+        current: Installer.disk
+        onChosen: key => Installer.disk = key
+        Component.onCompleted: forceActiveFocus()
+    }
+    Buttons {
+        visible: !Installer.probing && Installer.disks.length === 0
+        H.InkButton {
+            text: "look again"
+            ink: "c1"
+            onClicked: Installer.refresh()
         }
     }
 }

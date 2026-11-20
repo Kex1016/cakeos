@@ -1,164 +1,154 @@
+pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import qs
 import qs.components
+import qs.modules.common.widgets.haiiro as H
 
 Page {
     id: page
 
-    property bool showLog: Installer.phase === "failed"
+    readonly property bool running: Installer.phase === "running"
+    readonly property bool done: Installer.phase === "done"
+    readonly property bool failed: Installer.phase === "failed"
+    readonly property int finished: done ? Installer.stages.length : Installer.stagesDone.length
+    property bool showLog: failed
 
-    title: Installer.phase === "done" ? "CakeOS is installed" : Installer.phase === "failed" ? "The install failed" : "Installing CakeOS"
-    subtitle: Installer.phase === "done" ? "Remove the installation media, then restart into your new system." : Installer.phase === "failed" ? Installer.error : "This takes a while: most of the system is downloaded or built now."
+    label: done ? "nixos-install: done" : failed ? "nixos-install: failed" : "nixos-install"
+    variant: done ? "foam" : failed ? "love" : "pine"
+    hints: []
+    note: failed && Installer.crashReport !== "" ? Installer.crashReport : "/var/log/cake-installer.log"
 
-    Section {
-        title: "Progress"
-        icon: Installer.phase === "done" ? "task_alt" : Installer.phase === "failed" ? "error" : "downloading"
+    Line {
+        ink: page.failed ? "love" : "rose"
+        text: page.done ? "It's built. Take the installer out and restart into your new system." : page.failed ? (Installer.error || "Something went wrong.") : "The machine is building itself. Most of CakeOS is downloaded or compiled now, so this takes a while."
+    }
 
-        Repeater {
-            model: Installer.stages
-            RowLayout {
-                id: stageRow
-                required property var modelData
-                readonly property bool done: Installer.stagesDone.includes(modelData.id) || Installer.phase === "done"
-                readonly property bool current: Installer.stage === modelData.id && Installer.phase !== "done"
+    Heading {
+        text: "stages"
+    }
+    Repeater {
+        model: Installer.stages
+
+        RowLayout {
+            id: stage
+            required property var modelData
+            readonly property bool finished: Installer.stagesDone.includes(modelData.id) || page.done
+            readonly property bool current: Installer.stage === modelData.id && !page.done
+
+            Layout.fillWidth: true
+            Layout.preferredHeight: 28
+            spacing: 12
+
+            H.HText {
+                Layout.leftMargin: 8
+                Layout.preferredWidth: 2 * H.HTokens.ch()
+                text: stage.finished ? "✓" : stage.current ? (page.failed ? "×" : spinner.frame) : "·"
+                ink: stage.finished ? "foam" : stage.current ? (page.failed ? "love" : "rose") : "muted"
+            }
+            H.HText {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 40
-                spacing: 14
-
-                Item {
-                    implicitWidth: 28
-                    implicitHeight: 28
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        visible: !spinner.visible
-                        text: stageRow.done ? "check_circle" : stageRow.current && Installer.phase === "failed" ? "cancel" : "radio_button_unchecked"
-                        fill: stageRow.done || stageRow.current ? 1 : 0
-                        color: stageRow.done ? Theme.primary : stageRow.current ? Theme.error : Theme.outline
-                    }
-                    MaterialSymbol {
-                        id: spinner
-                        anchors.centerIn: parent
-                        visible: stageRow.current && Installer.phase === "running"
-                        text: "progress_activity"
-                        color: Theme.primary
-                        RotationAnimation on rotation {
-                            running: spinner.visible
-                            from: 0
-                            to: 360
-                            duration: 1000
-                            loops: Animation.Infinite
-                        }
-                    }
-                }
-                StyledText {
-                    Layout.fillWidth: true
-                    text: stageRow.modelData.name
-                    color: stageRow.done || stageRow.current ? Theme.colOnSurface : Theme.subtext
-                    font.weight: stageRow.current ? Font.Medium : Font.Normal
-                }
+                text: stage.modelData.name
+                ink: stage.finished || stage.current ? "text" : "muted"
             }
-        }
-
-        // Indeterminate bar, like the shell's StyledIndeterminateProgressBar.
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.topMargin: 8
-            visible: Installer.phase === "running"
-            implicitHeight: 6
-            radius: 3
-            color: Theme.secondaryContainer
-            clip: true
-            Rectangle {
-                id: runner
-                width: parent.width * 0.3
-                height: parent.height
-                radius: 3
-                color: Theme.primary
-                NumberAnimation on x {
-                    from: -runner.width
-                    to: runner.parent.width
-                    duration: 1600
-                    loops: Animation.Infinite
-                    running: Installer.phase === "running"
-                    easing.type: Easing.InOutCubic
-                }
+            H.HText {
+                visible: stage.current
+                text: page.failed ? "stopped here" : "now"
+                role: "caption"
+                ink: page.failed ? "love" : "inkMuted"
             }
-        }
-        StyledText {
-            Layout.fillWidth: true
-            visible: Installer.phase === "running"
-            text: Installer.status
-            color: Theme.subtext
-            elide: Text.ElideRight
-            wrapMode: Text.NoWrap
-            font.family: Theme.font.mono
-            font.pixelSize: Theme.font.smaller
         }
     }
 
-    Notice {
-        visible: Installer.phase === "failed" && Installer.crashReport !== ""
-        kind: "error"
-        text: "A crash report was written to " + Installer.crashReport + (Installer.crashReport.startsWith("/mnt/") ? "." : ". It lives in RAM and is lost on reboot, so copy it off first.")
+    // A spinner made of steps, like everything else that moves.
+    Timer {
+        id: spinner
+        property int n: 0
+        readonly property string frame: "|/-\\"[n % 4]
+        interval: 125
+        repeat: true
+        running: page.running && page.visible && !H.HTokens.cut
+        onTriggered: n++
     }
 
-    RowLayout {
+    H.Progress {
         Layout.fillWidth: true
-        visible: Installer.phase !== "running"
-        spacing: 8
-        Item {
-            Layout.fillWidth: true
+        Layout.topMargin: 12
+        label: page.done ? "installed" : page.failed ? "stopped" : "installing"
+        count: page.finished + " / " + Installer.stages.length
+        value: page.finished / Installer.stages.length
+    }
+    H.HText {
+        Layout.fillWidth: true
+        Layout.topMargin: 6
+        visible: page.running && Installer.status !== ""
+        text: Installer.status
+        role: "code"
+        ink: "inkMuted"
+        elide: Text.ElideRight
+    }
+    Line {
+        Layout.topMargin: 6
+        visible: page.failed && Installer.crashReport !== ""
+        role: "caption"
+        ink: "love"
+        text: "A crash report is at " + Installer.crashReport + (Installer.crashReport.startsWith("/mnt/") ? "." : ". It lives in RAM and is gone after a restart, so copy it off first.")
+    }
+
+    Buttons {
+        visible: !page.running
+        H.InkButton {
+            visible: page.done
+            text: "restart now"
+            ink: "c3"
+            onClicked: Installer.reboot()
         }
-        Button {
-            visible: Installer.phase === "failed"
-            kind: "text"
-            icon: "terminal"
-            text: "Open a shell"
+        H.InkButton {
+            visible: page.failed
+            text: "open a shell"
+            ink: "c3"
             onClicked: Installer.leave("shell")
         }
-        Button {
-            icon: "restart_alt"
-            text: "Restart"
+        H.InkButton {
+            visible: page.failed
+            text: "restart"
+            ink: "c1"
             onClicked: Installer.reboot()
         }
     }
 
-    Section {
-        title: "Output"
-        icon: "article"
+    Heading {
+        text: "output"
+    }
+    H.InkButton {
+        text: page.showLog ? "hide the output" : "show the output"
+        flat: true
+        on: page.showLog
+        onClicked: page.showLog = !page.showLog
+    }
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.topMargin: 6
+        visible: page.showLog
+        implicitHeight: 260
+        color: H.HTokens.base
 
-        Button {
-            kind: "text"
-            icon: page.showLog ? "expand_less" : "expand_more"
-            text: page.showLog ? "Hide the output" : "Show the output"
-            onClicked: page.showLog = !page.showLog
-        }
-        Rectangle {
-            Layout.fillWidth: true
-            visible: page.showLog
-            implicitHeight: 300
-            radius: Theme.rounding.small
-            color: Theme.surfaceContainerLow
-
-            ListView {
-                id: logView
-                anchors.fill: parent
-                anchors.margins: 12
-                clip: true
-                model: Installer.log
-                onCountChanged: positionViewAtEnd()
-                ScrollBar.vertical: ScrollBar {}
-                delegate: StyledText {
-                    required property string modelData
-                    width: logView.width
-                    text: modelData
-                    wrapMode: Text.WrapAnywhere
-                    font.family: Theme.font.mono
-                    font.pixelSize: Theme.font.smaller
-                    color: Theme.colOnSurfaceVariant
-                }
+        ListView {
+            id: log
+            anchors.fill: parent
+            anchors.margins: 8
+            clip: true
+            model: Installer.log
+            boundsBehavior: Flickable.StopAtBounds
+            onCountChanged: positionViewAtEnd()
+            delegate: H.HText {
+                required property string modelData
+                width: log.width
+                text: modelData
+                role: "small"
+                ink: /error|fail/i.test(modelData) ? "love" : "subtle"
+                wrapMode: Text.WrapAnywhere
+                lineHeightMode: Text.FixedHeight
             }
         }
     }
