@@ -2,15 +2,20 @@
 //@ pragma Env QS_NO_RELOAD_POPUP=1
 //@ pragma Env QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import qs
 import qs.components
 import qs.pages
+import qs.modules.common
+import qs.modules.common.widgets.haiiro as H
 
-// The graphical CakeOS installer: the hecate shell's settings window, over the
-// CakeOS wallpaper, one page per step.
+// The graphical CakeOS installer in haiiro: the live blobs behind it, the step
+// as a display title, the steps in a rail window and the current one in a
+// window of its own, laid out like the shell's settings dashboard. The parts
+// are hecate's haiiro kit (modules/common/widgets/haiiro, from the hecate input).
 ShellRoot {
     FloatingWindow {
         id: window
@@ -18,147 +23,135 @@ ShellRoot {
         title: "CakeOS Installer"
         implicitWidth: 1280
         implicitHeight: 800
-        color: Theme.background
+        color: H.HTokens.base
 
         readonly property var steps: [
-            { name: "Welcome", icon: "waving_hand", page: welcome, valid: true },
-            { name: "Disk", icon: "hard_drive", page: disk, valid: Installer.disk !== "" },
-            { name: "Desktop", icon: "desktop_windows", page: desktop, valid: Installer.desktop !== "" },
-            { name: "Account", icon: "person", page: account, valid: Installer.accountValid },
-            { name: "Region", icon: "language", page: region, valid: Installer.timeZone !== "" && Installer.layouts.length > 0 },
-            { name: "Software", icon: "apps", page: software, valid: true },
-            { name: "System", icon: "tune", page: system, valid: Installer.swapValid },
-            { name: "Review", icon: "checklist", page: review, valid: true },
-            { name: "Install", icon: "download", page: install, valid: false }
+            { id: "welcome", page: welcome, valid: true },
+            { id: "disk", page: disk, valid: Installer.disk !== "" },
+            { id: "desktop", page: desktop, valid: Installer.desktop !== "" },
+            { id: "account", page: account, valid: Installer.accountValid },
+            { id: "region", page: region, valid: Installer.timeZone !== "" && Installer.layouts.length > 0 },
+            { id: "software", page: software, valid: true },
+            { id: "system", page: system, valid: Installer.swapValid },
+            { id: "review", page: review, valid: true },
+            { id: "install", page: install, valid: false }
         ]
         readonly property int reachable: {
             const i = steps.findIndex(s => !s.valid);
             return i < 0 ? steps.length - 1 : i;
         }
         readonly property bool installing: Installer.phase !== "idle"
+        readonly property bool reviewing: current === steps.length - 2
         property int current: 0
 
+        // Smaller screens (a VM's 1024x768) get the smaller display title.
+        readonly property bool compact: height < 860 || width < 1280
+        readonly property int side: compact ? 32 : 50
+
         function go(i) {
-            if (!installing && i <= reachable)
+            if (!installing && i >= 0 && i <= Math.min(reachable, steps.length - 2))
                 current = i;
         }
 
-        Image {
+        function start() {
+            current = steps.length - 1;
+            Installer.install();
+        }
+
+        Blobs {
             anchors.fill: parent
-            source: Theme.wallpaper
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
+            still: Appearance.reducedMotion
+            // nixos-install wants the CPU more than the background does, and
+            // without GL every frame is drawn on the CPU too
+            fps: Installer.phase === "running" ? (Appearance.software ? 4 : 8) : (Appearance.software ? 15 : 30)
+        }
+        H.Veil {
+            anchors.fill: parent
+            blocking: false
         }
 
-        Rectangle {
-            id: shadow
-            anchors.fill: card
-            anchors.margins: -1
-            anchors.topMargin: 2
-            anchors.bottomMargin: -6
-            radius: card.radius + 2
-            color: Theme.alpha("#000000", 0.35)
-        }
-
-        Rectangle {
-            id: card
-            anchors.centerIn: parent
-            width: Math.min(parent.width - 80, 1080)
-            height: Math.min(parent.height - 80, 720)
-            radius: Theme.rounding.window
-            color: Theme.layer0
-            border.width: 1
-            border.color: Theme.alpha(Theme.outlineVariant, 0.6)
+        Item {
+            id: frame
+            anchors.fill: parent
+            anchors.leftMargin: window.side
+            anchors.rightMargin: window.side
+            anchors.topMargin: window.compact ? 20 : 32
+            anchors.bottomMargin: window.compact ? 20 : 24
 
             focus: true
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_PageDown) {
-                    window.go(window.current + 1);
+                    if (window.steps[window.current].valid && !window.reviewing)
+                        window.go(window.current + 1);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_PageUp && window.current > 0) {
+                } else if (event.key === Qt.Key_PageUp) {
                     window.go(window.current - 1);
                     event.accepted = true;
                 }
             }
 
-            RowLayout {
+            ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 8
-                spacing: 8
+                spacing: 18
 
-                Rectangle {
-                    Layout.fillHeight: true
-                    implicitWidth: 236
-                    radius: Theme.rounding.normal + 4
-                    color: Theme.layer1
+                // the step as a display title, the prompt that would run it on the right
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 24
 
+                    Item {
+                        Layout.fillWidth: true
+                        implicitHeight: title.implicitHeight
+                        H.HText {
+                            x: 8
+                            y: 8
+                            text: title.text
+                            role: "display"
+                            ink: "base"
+                            font.pixelSize: title.font.pixelSize
+                            lineHeight: title.lineHeight
+                        }
+                        H.HText {
+                            id: title
+                            text: window.steps[window.current].id
+                            role: "display"
+                            font.pixelSize: window.compact ? 96 : 120
+                            lineHeight: font.pixelSize
+                        }
+                    }
                     ColumnLayout {
-                        anchors.fill: parent
-                        anchors.topMargin: 22
-                        anchors.leftMargin: 12
-                        anchors.bottomMargin: 16
+                        Layout.alignment: Qt.AlignBottom
+                        Layout.bottomMargin: 10
                         spacing: 4
-
-                        RowLayout {
-                            Layout.leftMargin: 8
-                            Layout.bottomMargin: 14
-                            spacing: 12
-                            Rectangle {
-                                implicitWidth: 48
-                                implicitHeight: 48
-                                radius: Theme.rounding.normal
-                                color: Theme.primaryContainer
-                                MaterialSymbol {
-                                    anchors.centerIn: parent
-                                    text: "cake"
-                                    fill: 1
-                                    iconSize: 28
-                                    color: Theme.colOnPrimaryContainer
-                                }
-                            }
-                            ColumnLayout {
-                                spacing: 0
-                                StyledText {
-                                    text: "CakeOS"
-                                    font.pixelSize: Theme.font.larger
-                                    font.weight: Font.Medium
-                                    color: Theme.colOnLayer1
-                                }
-                                StyledText {
-                                    text: "Installer"
-                                    font.pixelSize: Theme.font.smaller
-                                    color: Theme.subtext
-                                }
-                            }
+                        H.PromptLine {
+                            Layout.alignment: Qt.AlignRight
+                            path: "~/install"
+                            command: "cake-install"
+                            args: window.steps[window.current].id
                         }
-
-                        Repeater {
-                            model: window.steps
-                            NavButton {
-                                required property var modelData
-                                required property int index
-                                Layout.fillWidth: true
-                                icon: modelData.icon
-                                text: modelData.name
-                                toggled: window.current === index
-                                done: index < window.current && !window.installing || window.installing && index < window.steps.length - 1
-                                enabled: window.installing ? index === window.steps.length - 1 : index <= Math.min(window.reachable, window.steps.length - 2)
-                                onClicked: window.go(index)
-                            }
-                        }
-
-                        Item {
-                            Layout.fillHeight: true
+                        H.HText {
+                            Layout.alignment: Qt.AlignRight
+                            text: "CakeOS · live system"
+                            role: "caption"
+                            ink: "inkMuted"
                         }
                     }
                 }
 
-                ColumnLayout {
+                RowLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.margins: 20
-                    Layout.leftMargin: 28
-                    spacing: 16
+                    spacing: 24
+
+                    Rail {
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: window.compact ? 240 : 280
+                        steps: window.steps
+                        current: window.current
+                        reachable: window.reachable
+                        installing: window.installing
+                        onPicked: i => window.go(i)
+                    }
 
                     Item {
                         Layout.fillWidth: true
@@ -166,72 +159,71 @@ ShellRoot {
 
                         Repeater {
                             model: window.steps
+
+                            // A new step pixelates in; the old one cuts away.
                             Item {
+                                id: slot
                                 required property var modelData
                                 required property int index
                                 readonly property bool active: window.current === index
                                 anchors.fill: parent
-                                anchors.topMargin: active ? 0 : 12
-                                opacity: active ? 1 : 0
-                                visible: opacity > 0
-                                Behavior on opacity {
-                                    NumberAnimation {
-                                        duration: Theme.duration
-                                        easing.type: Easing.OutCubic
-                                    }
-                                }
-                                Behavior on anchors.topMargin {
-                                    NumberAnimation {
-                                        duration: Theme.duration
-                                        easing.type: Easing.OutCubic
-                                    }
-                                }
-                                Loader {
+                                visible: active
+
+                                H.PixelTransition {
                                     anchors.fill: parent
-                                    sourceComponent: parent.modelData.page
+                                    shown: slot.active
+                                    animateOnLoad: false
+
+                                    Loader {
+                                        width: slot.width
+                                        height: slot.height
+                                        sourceComponent: slot.modelData.page
+                                    }
                                 }
                             }
                         }
                     }
+                }
 
-                    RowLayout {
-                        readonly property bool reviewing: window.current === window.steps.length - 2
+                // back, where you are, next
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: !window.installing
+                    spacing: 16
+
+                    H.InkButton {
+                        visible: window.current > 0
+                        text: "back"
+                        ink: "c1"
+                        onClicked: window.go(window.current - 1)
+                    }
+                    Item {
                         Layout.fillWidth: true
-                        visible: !window.installing
-                        spacing: 8
-                        Button {
-                            kind: "text"
-                            icon: "arrow_back"
-                            text: "Back"
-                            visible: window.current > 0
-                            onClicked: window.go(window.current - 1)
-                        }
-                        Item {
-                            Layout.fillWidth: true
-                        }
-                        StyledText {
-                            visible: !parent.reviewing
-                            text: "Step " + (window.current + 1) + " of " + (window.steps.length - 1)
-                            color: Theme.subtext
-                            font.pixelSize: Theme.font.smaller + 1
-                        }
-                        Button {
-                            visible: !parent.reviewing
-                            icon: "arrow_forward"
-                            text: "Next"
-                            enabled: window.steps[window.current].valid
-                            onClicked: window.go(window.current + 1)
-                        }
-                        Button {
-                            visible: parent.reviewing
-                            kind: "danger"
-                            icon: "delete_forever"
-                            text: "Erase and install"
-                            onClicked: {
-                                window.current = window.steps.length - 1;
-                                Installer.install();
-                            }
-                        }
+                    }
+                    H.HText {
+                        visible: !window.reviewing
+                        text: "step " + (window.current + 1) + " of " + (window.steps.length - 1)
+                        role: "caption"
+                        ink: "inkMuted"
+                    }
+                    H.InkButton {
+                        visible: !window.reviewing
+                        text: "next"
+                        ink: "c3"
+                        enabled: window.steps[window.current].valid
+                        onClicked: window.go(window.current + 1)
+                    }
+                    H.HText {
+                        visible: window.reviewing
+                        text: "this erases " + Installer.disk
+                        role: "caption"
+                        ink: "love"
+                    }
+                    H.InkButton {
+                        visible: window.reviewing
+                        text: "erase and install"
+                        ink: "c2"
+                        onClicked: window.start()
                     }
                 }
             }

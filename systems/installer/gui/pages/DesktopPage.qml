@@ -2,30 +2,33 @@ import QtQuick
 import QtQuick.Layouts
 import qs
 import qs.components
+import qs.modules.common.widgets.haiiro as H
 
 Page {
-    title: "Desktop"
-    subtitle: "This decides the session, the default apps, and which extras each package group installs."
+    label: "ls desktops/"
+    note: "switch later with cakeos-wm"
 
-    Section {
-        title: "Desktop environment"
-        icon: "desktop_windows"
+    Line {
+        ink: "rose"
+        text: "Each desktop brings its own session, apps and extras. Pick the one you will live in."
+    }
 
-        StyledText {
-            visible: Installer.probing
-            text: "Reading the desktops this flake offers..."
-            color: Theme.subtext
-        }
-        Repeater {
-            model: Installer.desktops
-            ChoiceCard {
-                required property var modelData
-                icon: modelData.name === "hecate" ? "auto_awesome" : modelData.name === "gnome" ? "footprint" : modelData.name === "plasma" ? "blur_on" : "desktop_windows"
-                title: ({ gnome: "GNOME", plasma: "Plasma", hecate: "hecate" })[modelData.name] ?? modelData.name
-                description: modelData.description.replace(/^[^-]+ - /, "")
-                selected: Installer.desktop === modelData.name
-                onClicked: Installer.desktop = modelData.name
-            }
-        }
+    Heading {
+        text: "desktops"
+    }
+    Line {
+        visible: Installer.probing
+        ink: "subtle"
+        text: "Reading the desktops this flake offers…"
+    }
+    ChoiceList {
+        model: Installer.desktops.map(d => ({
+                    key: d.name,
+                    title: d.name,
+                    description: d.description.replace(/^[^-]+ - /, ""),
+                    meta: d.name === "hecate" ? "haiiro" : ""
+                }))
+        current: Installer.desktop
+        onChosen: key => Installer.desktop = key
     }
 }
