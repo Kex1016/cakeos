@@ -12,6 +12,8 @@
   imports = [
     inputs.hecate.nixosModules.default
     inputs.hecate-greetd.nixosModules.default
+    # The app set and its desktop entries, and the MIME defaults that point at them.
+    ./apps.nix
   ];
 
   config = lib.mkIf (config.cakeos.desktop == "hecate") {
@@ -38,34 +40,56 @@
         };
       };
       libinput.enable = true;
+      # Trash, mounts and smb:// for the GTK side (the file chooser portal, the
+      # browser). Qt's apps get theirs from KIO.
       gvfs.enable = true;
-      # Calendar and Contacts' data server, Nautilus' spacebar preview.
-      gnome = {
-        evolution-data-server.enable = true;
-        sushi.enable = true;
-      };
+      # The Secret Service: the shell keeps its CalDAV and iCloud passwords in it
+      # (secret-tool), and Cider's token. programs.hecate.shell.enable turns it on
+      # already; it is stated here because the sign-in below depends on it.
+      gnome.gnome-keyring.enable = true;
     };
 
-    # The GNOME desktop's GTK app set (Nautilus, Loupe, Papers, Text Editor, ...),
-    # themed from the wallpaper by the shell (adw-gtk3 + matugen's gtk.css).
-    environment.systemPackages =
-      import ../gnome/apps.nix pkgs
-      ++ (with pkgs; [
-        kitty
-        wl-clipboard
-        adwaita-icon-theme
-      ]);
+    # Unlock the login keyring with the login password. hecate-greetd sets the first
+    # one by default; stated here so the keyring keeps working if that default moves.
+    # The shell's lock screen (PAM service "quickshell") gets it too, which unlocks a
+    # keyring that is still locked after an auto-login the moment the password is typed
+    # there. Auto-login itself never types one, so that keyring starts locked.
+    security.pam.services = {
+      greetd.enableGnomeKeyring = true;
+      quickshell.enableGnomeKeyring = true;
+    };
 
-    # What those apps lean on outside GNOME: Seahorse and Disks' system bits,
-    # gsettings (the shell sets the GTK theme and icons through it).
+    # librepods runs through a cap_net_admin wrapper only its group may execute
+    # (modules/system/apps/librepods.nix turns it on with cakeos.hardware "airpods"),
+    # and the shell's AirPods widgets start it.
+    users.users.${config.cakeos.primaryUser}.extraGroups =
+      lib.optional (builtins.elem "airpods" config.cakeos.hardware) "librepods";
+
+    # Qt apps pick up the KDE platform theme (file dialogs, colours from the
+    # shell's kdeglobals) and find the plugins of everything installed system-wide.
+    # Home Manager sets the same theme per user (programs.hecate.shell.theming.qt).
+    qt = {
+      enable = true;
+      platformTheme = lib.mkDefault "kde";
+    };
+
+    # Terminals. kitty is the one Mod+Return opens and the one the terminal apps
+    # in apps.nix run in; foot stays as a light second.
+    environment.systemPackages = with pkgs; [
+      kitty
+      wl-clipboard
+      adwaita-icon-theme
+    ];
+
     programs = {
-      # The terminal. Colours come from the shell (it adds an include for them to
+      # Colours come from the shell (it adds an include for them to
       # ~/.config/foot/foot.ini, which in turn includes this system config).
       foot = {
         enable = true;
         settings = {
           main = {
-            font = "JetBrainsMono Nerd Font:size=12";
+            # Whatever fontconfig's monospace is, so the haiiro stack applies here too.
+            font = "monospace:size=12";
             pad = "16x16";
           };
           scrollback.lines = 10000;
@@ -75,9 +99,27 @@
           };
         };
       };
+      # gsettings: the shell sets the GTK theme and icons through it.
       dconf.enable = true;
-      seahorse.enable = true;
-      gnome-disks.enable = true;
     };
+
+    # The IBM VGA face's bold is the double-width 2x cut, which wrecks a terminal's
+    # cell grid, so anything asking for IBM VGA 8x16 in bold gets the regular face.
+    # It is a fontconfig rule rather than a terminal setting so kitty, foot and the
+    # apps run inside them all agree. It runs last (99) and only when VGA is the
+    # first family asked for, so a font stack that merely falls back to it keeps
+    # its own bold. The shell loads its own copies of the fonts and is unaffected.
+    fonts.fontconfig.confPackages = [
+      (pkgs.writeTextDir "etc/fonts/conf.d/99-haiiro-vga-regular-bold.conf" ''
+        <?xml version="1.0"?>
+        <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+        <fontconfig>
+          <match target="pattern">
+            <test name="family" qual="first"><string>IBM VGA 8x16</string></test>
+            <edit name="weight" mode="assign" binding="strong"><const>regular</const></edit>
+          </match>
+        </fontconfig>
+      '')
+    ];
   };
 }
