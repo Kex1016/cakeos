@@ -12,6 +12,9 @@
   imports = [
     inputs.hecate.homeManagerModules.default
     ./groups.nix
+    ./theme
+    ../../home/apps/apple.nix
+    ../../home/apps/claude.nix
   ];
 
   config = lib.mkIf (osConfig.cakeos.desktop == "hecate") {
@@ -55,12 +58,27 @@
     # wallpaper (hecate docs/nix.md, "Theming from the wallpaper"). Home
     # Manager's `gtk` module would fight it over gtk.css, so it stays off.
 
-    home.pointerCursor = {
-      enable = true;
-      name = "Bibata-Modern-Classic";
-      package = pkgs.bibata-cursors;
-      size = 24;
-      x11.enable = true;
-    };
+    # The cursor is the haiiro pixel cursor (./theme).
+
+    # Claude Code and the shell's Claude features, off for any desktop but this
+    # one. hecate-mcp comes from the hecate flake once it exports it.
+    cakeos.claude =
+      let
+        shell = config.wayland.windowManager.hecate.shell.finalPackage;
+        mcpPackage = inputs.hecate.packages.${pkgs.stdenv.hostPlatform.system}.hecate-mcp or null;
+      in
+      {
+        cli.enable = lib.mkDefault true;
+        shell.enable = lib.mkDefault true;
+        hooks = {
+          enable = lib.mkDefault true;
+          script = lib.mkDefault "${shell}/${shell.config}/scripts/claude/hook.py";
+          python = lib.mkDefault "${shell.pythonEnv}/bin/python3";
+        };
+        mcp = {
+          enable = lib.mkDefault (mcpPackage != null);
+          package = lib.mkDefault mcpPackage;
+        };
+      };
   };
 }
