@@ -112,18 +112,19 @@ Each `modules/desktops/<de>/` provides:
   runtime (`$HOME`-relative files/dirs, globs allowed, and dconf directories). `cakeos-wm`
   stashes it when switching away and restores it on return. `modules/desktops/state.nix`
   collects them as plain Nix so the script can `nix eval --file` it. Only list what is *this*
-  desktop's: state shared with another desktop (hecate uses GNOME's apps, so Nautilus/Text
-  Editor/Software state; hecate's Qt apps use KDE's file dialog, so `user-places.xbel`) stays
-  out, or switching would hide it from the other one
+  desktop's: state shared with another desktop stays out, or switching would hide it from the
+  other one. hecate and Plasma both run the Qt apps (Dolphin, Gwenview, Okular) and KDE's file
+  dialog, so their state, including `user-places.xbel`, is in neither `state.nix`
 
 `hecate/` is the exception to "DE packages from nixpkgs": it comes from the `hecate` flake
 input (Kex1016/hecate, public, fetched with the plain `github:` fetcher). Its
 `system.nix` and `home.nix` import that flake's NixOS and Home Manager modules unconditionally
-(they only declare options) and enable them under the usual gate. It borrows GNOME's GTK app
-set (`modules/desktops/gnome/apps.nix`, a plain `pkgs: [ ... ]` list both import) and GNOME's
-`mime.nix`, which gates on either desktop. GTK/Qt/icon theming is left to the bundled shell,
-which recolours them from the wallpaper, so `hecate/home.nix` must not enable Home Manager's
-`gtk` module (it would fight the shell over `gtk.css`).
+(they only declare options) and enable them under the usual gate. Its apps are its own:
+`apps.nix` (kitty terminal apps with desktop entries, the Qt app set, and the
+`cakeos.hecate.defaultApps` options) and `mime.nix`; GNOME's app set and MIME file are not used.
+Qt apps follow KDE's platform theme. Theming is left to the bundled shell, which recolours them
+from the wallpaper, so `hecate/home.nix` must not enable Home Manager's `gtk` module (it would
+fight the shell over `gtk.css`).
 Its login screen is not SDDM but `hecate-greetd` (the `hecate-greetd` flake input, which
 follows `hecate`): greetd running the bundled shell's lock screen inside hecate, with the
 wallpaper, colours, monitor layout and keyboard of the user being logged in. Each user's shell
@@ -160,9 +161,9 @@ import everything unconditionally and let the install-time choice decide.
 ### Remaining shared modules (`modules/`)
 
 - `modules/system/core/` — locale/keyboard, boot splash, fonts, low-level fixes
-  - `limine-theme.nix` themes the installed system's Limine menu from the shared `theme/`
-    palette (wallpaper, terminal palette, branding). Everything is `mkDefault`, and
-    `cakeos.limine.wallpaper` swaps the wallpaper
+  - `limine-theme.nix` themes the installed system's Limine menu in haiiro (from `theme/`): a
+    still of the blobs behind one opaque panel, foam title, gold countdown. Everything is
+    `mkDefault`. `cakeos.limine.wallpaper` swaps the wallpaper (default: a 1920x1080 blobs still)
 - `modules/system/apps/` — optional system services gated on `cakeos.groups`/`cakeos.hardware`
   (steam, ntsync, gaming tweaks, vpn, tablet, librepods)
 - `modules/home/apps/` — always-on user packages (browsers, cli, essentials, extras)
@@ -191,22 +192,20 @@ import everything unconditionally and let the install-time choice decide.
   via getty. On any abnormal exit the script touches `/run/cakeos-installer-stopped`, which stops
   the next login from auto-starting it; `cake-install` clears the flag and relaunches, and a
   reboot clears it too since it lives on `/run`.
-- `theme.nix` builds the ISO look from the shared Material You palette and wallpaper in
-  `theme/`: the GRUB theme (`grub-theme.nix`), the 800x600 syslinux splash and menu colours
-  for BIOS boot, a 16-colour console palette, and root's prompt. `grub-theme.nix` renders
-  Rubik / JetBrains Mono to `.pf2` (GRUB matches fonts by their exact
-  "<family> Regular <size>" name), Material Symbols icons per menu entry `--class`, and the
-  rounded boxes as pixmap slices. GRUB pads a box's content by its edge pieces, so the pills
-  (selection, timeout bar, scrollbar) only have side (or end) pieces. GRUB's PNG loader
-  rejects palette PNGs, hence `png32:`/`png24:`.
+- `theme.nix` builds the ISO look in haiiro from `theme/`: the GRUB menu (`grub-theme.nix`, a
+  blobs still behind a haiiro window, IBM VGA entries, Jacquard title, Unifont as `unifont.pf2`
+  for the glyphs IBM VGA lacks), the 800x600 syslinux splash for BIOS boot, the console palette
+  (Rosé Pine's terminal colours), a PSF2 console font (`theme.consoleFont`), and root's prompt.
+  GRUB's PNG loader rejects palette PNGs, hence `png32:`/`png24:`.
 - `gui.nix` + `gui/` are the graphical installer, which is what tty1 starts: a Quickshell app
-  (`gui/shell.qml`) in `cage`, styled after the hecate shell's settings window (nav rail,
-  Material You roles from a colors.json in the shell's own format, Rubik + Material Symbols)
-  over the wallpaper from `theme/`. `cake-install-gui` launches it, retries with pixman and
-  Qt's software renderer when GL fails (a VM without virgl), and falls back to the TUI if it
-  still cannot start. Its "Text installer" and "Open a shell" buttons hand over to the TUI or
-  leave a prompt. `CAKEOS_COLORS=<colors.json>` / `CAKEOS_WALLPAPER` restyle it, e.g. with a
-  running shell's `~/.local/state/quickshell/user/generated/colors.json`.
+  (`gui/shell.qml`) in `cage`, drawn in haiiro. `gui.nix` copies the haiiro kit
+  (`modules/common/widgets/haiiro`) from the hecate input and takes its fonts from hecate's
+  `haiiro-fonts`. `gui/modules/common/Appearance.qml` stands in for the shell's token source, so
+  the kit must not import anything else from `qs.modules.common`. cage has no background, so
+  `gui/components/Blobs.qml` runs the blob simulation on the CPU. `cake-install-gui` launches it,
+  retries with pixman and Qt's software renderer when GL fails (a VM without virgl), and falls
+  back to the TUI if it still cannot start. Its "Text installer" and "Open a shell" buttons hand
+  over to the TUI or leave a prompt. `CAKEOS_REDUCED_MOTION=1` freezes the blobs.
 - `backend.sh` (`/etc/cake-install-backend.sh`) is what both installers share: `probe` (disks,
   desktops, RAM, network as JSON), `timezones`, `mainframe`, `wifi-scan`/`wifi-connect`, and
   `install <answers.json>`, which does the disko -> flake copy -> `gen/` -> `nixos-install`
@@ -239,12 +238,51 @@ import everything unconditionally and let the install-time choice decide.
 
 ### `theme/`
 
-The CakeOS palette and default wallpaper, for everything that themes itself outside the hecate
-shell (the installer, the boot loaders). `palette.nix` is plain Nix: a `seed` and every Material
-You role (matugen tonal spot, dark), named like the shell's generated `colors.json`.
-`theme/update-palette.sh [#rrggbb]` regenerates it. `import ./theme { inherit pkgs; }` adds
-`colorsJson` and `wallpaper`, a 3840x2160 PNG of Material shapes drawn from the palette by
-`wallpaper.py`.
+`theme/` is the look for everything that themes itself outside the hecate shell (the installer,
+the boot loaders, the console). `haiiro.nix` is the palette, named as the design system's tokens.
+`blobs.py` draws the blobs background as one deterministic still, and `pixel.py`, `grub-art.py`,
+`syslinux-art.py` and `console-font.py` draw the boot art and console font. `import ./theme
+{ inherit pkgs; }` exports `haiiro`, `blobs { width, height, seed }`, `consoleFont` and `fonts`.
+`cursor/` is the haiiro pixel cursor theme.
+
+`palette.nix` is the older Material You palette (matugen tonal spot, dark, named like the shell's
+`colors.json`; `theme/update-palette.sh` regenerates it), with `colorsJson` and `wallpaper` from
+`wallpaper.py`. The installer GUI no longer reads them, so they are candidates for removal.
+
+### Options added with the haiiro shell
+
+- `cakeos.hecate.defaultApps` (hecate, `apps.nix`): one role per default app, each a desktop-file
+  id or a list of them (first choice first): `fileManager` (yazi), `textEditor` (nvim),
+  `imageViewer` (gwenview), `documentViewer` (okular), `archiver` (ark), `videoPlayer` and
+  `audioPlayer` (mpv), `browser` (zen-beta). `mimeTypes` overrides single types, applied last.
+  Dolphin, Gwenview, Okular and Ark are always installed, so switching among them needs nothing
+  else. Set it in `gen/<config>.nix`:
+
+  ```nix
+  cakeos.hecate.defaultApps = {
+    fileManager = "org.kde.dolphin.desktop";
+    mimeTypes."application/x-shellscript" = "org.kde.kate.desktop";
+  };
+  ```
+
+  An app that is not installed (kate, imv) must be added by the user.
+- `cakeos.claude.cli`, `cakeos.claude.hooks`, `cakeos.claude.mcp` and `cakeos.claude.shell`
+  (`modules/home/apps/claude.nix`). `cli` installs Claude Code, pinned by `flake.lock`. `hooks`
+  registers the bridge that reports Claude sessions to the shell (its `hook.py` and python env
+  come from the shell). `mcp` adds `hecate-mcp` as a user MCP server, writing
+  `~/.config/hecate/mcp.toml`; `allow` (default `["tint"]`) sets what it may change, and
+  `screenshots` (default true) offers the screenshot tool. `shell` turns on the shell's own
+  Claude switch, only while that setting is missing. The hecate desktop turns cli, hooks and
+  shell on (`mkDefault`), and mcp too now that hecate exports `hecate-mcp`. Set
+  `cakeos.claude.<option>.enable = false` in `gen/<config>.nix` to opt out.
+- `cakeos.apple.icloudpd` (iCloud Photos albums on a timer: `username`, `directory`, `albums`,
+  `interval`) and `cakeos.apple.rclone` (iCloud Drive mounted as a user service: `remote`,
+  `mountPoint`; not with Advanced Data Protection). Both are in `modules/home/apps/apple.nix`,
+  off by default, and the hecate desktop does not turn them on because they need per-user setup.
+  The icloudpd password is read from the keyring, never from Nix.
+- `cakeos.cursor.enable` and `cakeos.cursor.size` (24, 32 or 48; `modules/home/apps/cursor.nix`):
+  the haiiro pixel cursor as the default cursor. The hecate desktop turns it on.
+- `cakeos.limine.wallpaper` (`modules/system/core/limine-theme.nix`): see the Limine bullet above.
 
 ### Scripts
 
