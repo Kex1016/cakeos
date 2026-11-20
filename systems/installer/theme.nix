@@ -2,68 +2,88 @@
 
 let
   theme = import ../../theme { inherit pkgs; };
-  c = theme.colors;
+  c = theme.haiiro;
   argb = colour: "#ff${lib.removePrefix "#" colour}";
+  # What vesamenu.c32 prints over the splash: ink at 55%, the shell's `ink-muted`.
+  inkMuted = "#ff89879b";
 
-  # Syslinux draws its splash only at exactly the menu's 800x600.
-  splash = pkgs.runCommand "cakeos-boot-splash.png" { nativeBuildInputs = [ pkgs.imagemagick ]; } ''
-    magick ${theme.wallpaper} -resize x600 -gravity center -extent 800x600 png24:$out
+  # Syslinux draws its splash only at exactly the menu's 800x600. The splash
+  # carries everything but the entries (see theme/syslinux-art.py), so the
+  # `MENU` geometry below has to agree with the numbers in that script.
+  splash = pkgs.runCommand "cakeos-boot-splash.png" { nativeBuildInputs = [ theme.python ]; } ''
+    python ${theme.art}/syslinux-art.py $out ${theme.haiiroJson} \
+      ${theme.fonts.ibm} ${theme.fonts.jacquard} ${theme.fonts.unifont}
   '';
 in
 {
   isoImage = {
     grubTheme = import ./grub-theme.nix { inherit pkgs theme; };
     splashImage = splash;
+    # vesamenu.c32 uses the VGA 8x16 font, which is IBM VGA already. It lays the
+    # menu out in 8x16 cells (rows start 8px down the screen); the window in the
+    # splash is drawn around where those cells land.
     syslinuxTheme = ''
-      MENU TITLE CakeOS
+      MENU TITLE${" "}
       MENU RESOLUTION 800 600
       MENU CLEAR
       MENU ROWS 6
-      MENU CMDLINEROW -4
-      MENU TIMEOUTROW -3
-      MENU TABMSGROW  -2
-      MENU HELPMSGROW -1
+      MENU VSHIFT 10
+      MENU HSHIFT 9
+      MENU WIDTH 80
+      MENU MARGIN 1
+      MENU AUTOBOOT booting in # seconds
+      MENU TABMSG${" "}
+      MENU TIMEOUTROW 11
+      MENU CMDLINEROW 13
+      MENU TABMSGROW 15
+      MENU HELPMSGROW 17
       MENU HELPMSGENDROW -1
-      MENU MARGIN 0
 
       MENU COLOR BORDER 30;44 #00000000 #00000000 none
-      MENU COLOR SCREEN 37;40 ${argb c.on_surface} #00000000 none
-      MENU COLOR TABMSG 31;40 ${argb c.outline} #00000000 none
-      MENU COLOR TIMEOUT 1;37;40 ${argb c.on_surface_variant} #00000000 none
-      MENU COLOR TIMEOUT_MSG 37;40 ${argb c.on_surface_variant} #00000000 none
-      MENU COLOR CMDMARK 1;36;40 ${argb c.primary} #00000000 none
-      MENU COLOR CMDLINE 37;40 ${argb c.on_surface} #00000000 none
-      MENU COLOR TITLE 1;36;44 ${argb c.primary} #00000000 none
-      MENU COLOR UNSEL 37;44 ${argb c.on_surface} #00000000 none
-      MENU COLOR SEL 7;37;40 ${argb c.on_secondary_container} ${argb c.secondary_container} none
+      MENU COLOR SCREEN 37;40 ${argb c.text} #00000000 none
+      MENU COLOR TABMSG 31;40 ${inkMuted} #00000000 none
+      MENU COLOR TIMEOUT 1;37;40 ${inkMuted} #00000000 none
+      MENU COLOR TIMEOUT_MSG 37;40 ${inkMuted} #00000000 none
+      MENU COLOR CMDMARK 1;36;40 ${argb c.rose} #00000000 none
+      MENU COLOR CMDLINE 37;40 ${argb c.text} #00000000 none
+      MENU COLOR TITLE 1;36;44 ${argb c.foam} #00000000 none
+      MENU COLOR UNSEL 37;44 ${argb c.text} #00000000 none
+      MENU COLOR SEL 7;37;40 ${argb c.text} ${argb c.overlay} none
     '';
     volumeID = lib.mkForce "CAKEOS";
   };
 
-  # Linux console palette, so the TTY the installer runs on matches. Order is
-  # the standard 16: black, red, green, yellow, blue, magenta, cyan, white,
-  # then the bright half.
-  console.colors = [
-    "140a1c" # black -> deep violet
-    "ff5c8a" # red
-    "6ee7a8" # green
-    "ffcc66" # yellow
-    "9d6cff" # blue -> violet
-    "ff47c8" # magenta -> CakeOS pink
-    "7ae0e0" # cyan
-    "e6d8f2" # white
-    "3a2248" # bright black
-    "ff8fab" # bright red
-    "9bf5c4" # bright green
-    "ffe0a3" # bright yellow
-    "c0a0ff" # bright blue
-    "ff8fdc" # bright magenta
-    "a8f0f0" # bright cyan
-    "fff4ff" # bright white
+  # Linux console palette, so the TTY the installer runs on matches: Rosé Pine's
+  # terminal colours, with the background the night sky. Order is the standard
+  # 16: black, red, green, yellow, blue, magenta, cyan, white, then the bright
+  # half. Same job per colour as the shell's inks: red is love, green pine,
+  # yellow gold, blue foam, magenta iris, cyan rose.
+  console.colors = map (lib.removePrefix "#") [
+    c.base # black
+    c.love # red
+    c.pine # green
+    c.gold # yellow
+    c.foam # blue
+    c.iris # magenta
+    c.rose # cyan
+    c.text # white
+    c.muted # bright black
+    c.love # bright red
+    c.pine # bright green
+    c.gold # bright yellow
+    c.foam # bright blue
+    c.iris # bright magenta
+    c.rose # bright cyan
+    c.text # bright white
   ];
 
-  # Root's prompt on the ISO, for when the installer drops to a shell.
+  # The console face: IBM VGA 8x16 with Latin Extended-A and the glyphs the
+  # TUI draws (see theme/console-font.py). Replaces the ISO's Terminus.
+  console.font = "${theme.consoleFont}/share/consolefonts/haiiro.psf";
+
+  # Root's prompt on the ISO, for when the installer drops to a shell: the
+  # site's prompt line, `@ ~/path » `, in love, foam and rose.
   programs.bash.promptInit = ''
-    PS1='\[\e[1;38;5;212m\]cakeos\[\e[0;38;5;99m\] \w \[\e[1;38;5;212m\]»\[\e[0m\] '
+    PS1='\[\e[31m\]@\[\e[0m\] \[\e[34m\]\w\[\e[0m\] \[\e[36m\]»\[\e[0m\] '
   '';
 }

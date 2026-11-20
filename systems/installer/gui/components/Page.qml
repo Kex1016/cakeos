@@ -1,50 +1,40 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import qs
+import qs.modules.common.widgets.haiiro as H
 
-// A scrolling page with the shell's settings-page title block.
-ScrollView {
+// One step's window: labelled like the command that would show it (`lsblk`,
+// `passwd`), its lines in a scrolling column, key hints in the footer.
+H.HWindow {
     id: root
 
-    property string title
-    property string subtitle: ""
-    default property alias content: body.data
+    default property alias lines: column.data
+    property alias flick: scroll
 
-    contentWidth: availableWidth
-    clip: true
-    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-
-    ColumnLayout {
-        width: root.availableWidth
-        spacing: 24
-
-        ColumnLayout {
-            Layout.fillWidth: true
-            Layout.topMargin: 8
-            spacing: 6
-            StyledText {
-                Layout.fillWidth: true
-                text: root.title
-                font.pixelSize: Theme.font.title
-                font.weight: Font.Medium
-                color: Theme.colOnSurface
-            }
-            StyledText {
-                Layout.fillWidth: true
-                visible: root.subtitle !== ""
-                text: root.subtitle
-                color: Theme.subtext
-                font.pixelSize: Theme.font.normal
-            }
+    hints: [
+        {
+            key: "pgup",
+            text: "back"
+        },
+        {
+            key: "pgdn",
+            text: "next"
+        },
+        {
+            key: "tab",
+            text: "move"
         }
+    ]
+
+    Scroll {
+        id: scroll
+        Layout.fillWidth: true
+        Layout.fillHeight: true
 
         ColumnLayout {
-            id: body
-            Layout.fillWidth: true
-            Layout.rightMargin: 12
-            Layout.bottomMargin: 16
-            spacing: 24
+            id: column
+            width: scroll.availableWidth - 16
+            spacing: 0
         }
     }
 }

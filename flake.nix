@@ -52,11 +52,9 @@
     # (SteamClientHomebrew/Millennium#934). Back to `next` once that is fixed.
     millennium.url = "github:SteamClientHomebrew/Millennium/e5b683318ac458fab86317e1b3ffcd0aea39d3ff?dir=packages/nix";
     # The hecate compositor and its bundled shell (modules/desktops/hecate).
-    # git+https rather than github: so a private repo is fetched with git's own
-    # credentials (the github: tarball fetcher is anonymous and gets a 404).
     # Build against a local checkout instead with ./hecate-vm.sh.
     hecate = {
-      url = "github:Kex1016/wl-hex";
+      url = "github:Kex1016/hecate";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         home-manager.follows = "home-manager";

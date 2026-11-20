@@ -268,13 +268,13 @@
         "lastModified": 1793810498,
         "narHash": "sha256-uO7tbBoVwuw5Nv4YzoAVVvbIzt6Niv0+cKnLY52I1do=",
         "owner": "Kex1016",
-        "repo": "wl-hex",
+        "repo": "hecate",
         "rev": "d5f7086ca47f6dac03d8f5729be2e7b019ea039e",
         "type": "github"
       },
       "original": {
         "owner": "Kex1016",
-        "repo": "wl-hex",
+        "repo": "hecate",
         "type": "github"
       }
     },

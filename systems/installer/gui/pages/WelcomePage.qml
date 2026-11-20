@@ -1,110 +1,120 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import qs
 import qs.components
+import qs.modules.common.widgets.haiiro as H
 
 Page {
     id: page
 
     property string ssid: ""
 
-    title: "Welcome to CakeOS"
-    subtitle: "A NixOS flake, assembled. This installer erases a disk, sets CakeOS up on it and builds your system."
+    label: "cake-install: hello"
 
-    Section {
-        title: "Connection"
-        icon: Installer.online ? "wifi" : "wifi_off"
+    Line {
+        ink: "rose"
+        text: "The computer hums. A disk is about to become CakeOS."
+    }
+    Gap {}
+    Line {
+        text: "This installer erases one disk, sets CakeOS up on it and builds your system there. Most of the system is downloaded while it runs, so it wants a connection."
+    }
 
-        Notice {
-            visible: !Installer.probing && Installer.online
-            icon: "check_circle"
-            text: "Connected to the internet."
-        }
-        Notice {
-            visible: !Installer.probing && !Installer.online
-            kind: "warning"
-            text: Installer.hasWifi ? "No internet connection. Pick a Wi-Fi network below, or plug in a cable and press Check again." : "No internet connection and no Wi-Fi adapter. Plug in a cable and press Check again. Most of the system is downloaded during the install."
-        }
-
-        ColumnLayout {
-            Layout.fillWidth: true
-            Layout.topMargin: 6
-            visible: !Installer.online && Installer.hasWifi
-            spacing: 4
-
-            Repeater {
-                model: Installer.networks
-                ChoiceCard {
-                    required property string modelData
-                    icon: "wifi"
-                    title: modelData
-                    selected: page.ssid === modelData
-                    onClicked: page.ssid = modelData
-                }
-            }
-
-            TextField {
-                Layout.topMargin: 10
-                id: wifiPassword
-                visible: page.ssid !== ""
-                label: "Password for " + page.ssid
-                password: true
-                error: Installer.wifiError
-            }
-        }
-
-        RowLayout {
-            Layout.topMargin: 6
-            spacing: 8
-            Button {
-                visible: !Installer.online && Installer.hasWifi
-                kind: "tonal"
-                icon: "wifi_find"
-                text: Installer.scanning ? "Scanning..." : "Scan for networks"
-                enabled: !Installer.scanning
-                onClicked: Installer.scanWifi()
-            }
-            Button {
-                visible: !Installer.online && page.ssid !== ""
-                icon: "link"
-                text: Installer.connecting ? "Connecting..." : "Connect"
-                enabled: !Installer.connecting
-                onClicked: Installer.connectWifi(page.ssid, wifiPassword.text)
-            }
-            Button {
-                visible: !Installer.online
-                kind: "text"
-                icon: "refresh"
-                text: "Check again"
-                onClicked: Installer.refresh()
-            }
+    Heading {
+        text: "connection"
+    }
+    H.SettingRow {
+        Layout.fillWidth: true
+        name: "internet"
+        description: Installer.probing ? "Looking for a way out." : Installer.online ? "Connected. The binary cache is reachable." : Installer.hasWifi ? "No connection yet. Pick a network below, or plug in a cable and look again." : "No connection and no Wi-Fi adapter. Plug in a cable and look again."
+        H.Chip {
+            on: Installer.online
+            text: Installer.probing ? "checking" : Installer.online ? "online" : "offline"
         }
     }
 
-    Section {
-        title: "Other ways in"
-        icon: "terminal"
+    ColumnLayout {
+        Layout.fillWidth: true
+        visible: !Installer.probing && !Installer.online && Installer.hasWifi
+        spacing: 0
 
-        StyledText {
-            Layout.fillWidth: true
-            text: "The text installer asks the same questions in the console. A shell is a root prompt on the live system."
-            color: Theme.subtext
+        H.HLabel {
+            Layout.topMargin: 10
+            Layout.bottomMargin: 4
+            text: "networks"
+            visible: Installer.networks.length > 0
         }
-        RowLayout {
+        ChoiceList {
+            model: Installer.networks.map(n => ({
+                        key: n,
+                        title: n
+                    }))
+            current: page.ssid
+            onChosen: key => {
+                page.ssid = key;
+                wifiPassword.focusInput();
+            }
+        }
+        Field {
+            id: wifiPassword
+            Layout.topMargin: 8
+            visible: page.ssid !== ""
+            user: page.ssid
+            label: "password"
+            password: true
+            error: Installer.wifiError
+            onAccepted: Installer.connectWifi(page.ssid, text)
+        }
+        Line {
+            visible: page.ssid === "" && Installer.wifiError !== ""
             Layout.topMargin: 6
-            spacing: 8
-            Button {
-                kind: "tonal"
-                icon: "keyboard"
-                text: "Text installer"
-                onClicked: Installer.leave("tui")
-            }
-            Button {
-                kind: "text"
-                icon: "terminal"
-                text: "Open a shell"
-                onClicked: Installer.leave("shell")
-            }
+            role: "caption"
+            ink: "love"
+            text: Installer.wifiError
+        }
+    }
+
+    Buttons {
+        visible: !Installer.probing && !Installer.online
+        H.InkButton {
+            visible: Installer.hasWifi
+            text: Installer.scanning ? "scanning…" : Installer.networks.length > 0 ? "scan again" : "scan for networks"
+            ink: Installer.networks.length > 0 ? "c1" : ""
+            enabled: !Installer.scanning
+            onClicked: Installer.scanWifi()
+        }
+        H.InkButton {
+            visible: page.ssid !== ""
+            text: Installer.connecting ? "connecting…" : "connect"
+            ink: "c3"
+            enabled: !Installer.connecting
+            onClicked: Installer.connectWifi(page.ssid, wifiPassword.text)
+        }
+        H.InkButton {
+            text: "look again"
+            flat: true
+            onClicked: Installer.refresh()
+        }
+    }
+
+    Heading {
+        text: "other ways in"
+    }
+    Line {
+        ink: "subtle"
+        text: "The text installer asks the same questions in the console. A shell is a root prompt on the live system; cake-install-gui brings this back."
+    }
+    Buttons {
+        H.InkButton {
+            text: "text installer"
+            ink: "c1"
+            onClicked: Installer.leave("tui")
+        }
+        H.InkButton {
+            text: "open a shell"
+            ink: "c1"
+            onClicked: Installer.leave("shell")
         }
     }
 }

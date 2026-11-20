@@ -1,15 +1,26 @@
-# The graphical installer: gui/ (Quickshell) in cage, on the CakeOS palette and
-# wallpaper from theme/. It drives the same backend as install-tui.sh, which is
-# still there as the fallback and behind "Text installer".
-{ pkgs, ... }:
+# The graphical installer: gui/ (Quickshell) in cage, in haiiro. Its parts are
+# hecate's haiiro kit, copied in from the hecate input rather than kept twice, and
+# it is set in the same bundled fonts. It drives the same backend as
+# install-tui.sh, which is still there as the fallback and behind "text installer".
+{ pkgs, inputs, ... }:
 let
-  theme = import ../../theme { inherit pkgs; };
+  hecate = inputs.hecate;
 
+  # IBM VGA 8x16, Jacquard 24 and the Unifont fallback, with their fontconfig order.
+  haiiroFonts =
+    hecate.packages.${pkgs.stdenv.hostPlatform.system}.haiiro-fonts
+      or (pkgs.callPackage "${hecate}/nix/fonts.nix" { });
+
+  # gui/ imports the kit as qs.modules.common.widgets.haiiro, so it goes where
+  # the shell keeps it. gui/modules/common/Appearance.qml stands in for the
+  # shell's token source.
   gui = pkgs.runCommand "cakeos-installer-gui" { } ''
     cp -r ${./gui} $out
     chmod -R u+w $out
-    cp ${theme.colorsJson} $out/colors.json
-    cp ${theme.wallpaper} $out/wallpaper.png
+    mkdir -p $out/modules/common/widgets
+    cp -r ${hecate}/shell/end4-pC/modules/common/widgets/haiiro $out/modules/common/widgets/haiiro
+    chmod -R u+w $out/modules/common/widgets/haiiro
+    rm -f $out/modules/common/widgets/haiiro/Gallery.qml
   '';
 
   launcher = pkgs.writeShellApplication {
@@ -85,9 +96,6 @@ in
 
   hardware.graphics.enable = true;
 
-  fonts.packages = with pkgs; [
-    rubik
-    material-symbols
-    nerd-fonts.jetbrains-mono
-  ];
+  fonts.packages = [ haiiroFonts ];
+  fonts.fontconfig.confPackages = [ haiiroFonts ];
 }

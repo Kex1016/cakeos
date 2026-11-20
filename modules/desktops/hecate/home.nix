@@ -12,21 +12,21 @@
   imports = [
     inputs.hecate.homeManagerModules.default
     ./groups.nix
+    ./theme
+    ../../home/apps/apple.nix
+    ../../home/apps/claude.nix
   ];
 
   config = lib.mkIf (osConfig.cakeos.desktop == "hecate") {
     wayland.windowManager.hecate = {
       enable = true;
       # The bundled end-4 shell: bar, sidebars, launcher, lock screen, its
-      # keybind and layer-rule profiles (docs/keybinds.md in wl-hex).
+      # keybind and layer-rule profiles (docs/keybinds.md in hecate).
       shell.enable = true;
       settings = {
-        border = {
-          width = 2;
-          radius = 12;
-          # Maximized windows keep their border and rounded corners (hecate's default drops both).
-          keep_on_maximize = true;
-        };
+        # The frame is haiiro's (5px double pine, square, from hecate's module); maximized
+        # windows keep it (hecate's default drops it).
+        border.keep_on_maximize = true;
         # Same layouts as the console and the other desktops (modules/system/core/locale.nix
         # splits cakeos.keyboardLayouts into these).
         keyboard = {
@@ -38,9 +38,9 @@
         # Touchpads keep adaptive. The shell's hecate settings page can
         # change both per session.
         input."type:pointer".accel_profile = "flat";
-        # Login splash pictures (wallpaper and shell, no windows) go where hecate-greetd's login
-        # screen can read them, so a login fades straight into the desktop.
-        splash.dir = "/var/lib/hecate-greetd/users/${config.home.username}/splash";
+        # The blob background is left where hecate-greetd's login screen picks it up at
+        # logout, so the greeter carries on from the session's blobs.
+        background.blobs.save = "/var/lib/hecate-greetd/users/${config.home.username}/blobs.json";
       };
     };
 
@@ -51,16 +51,27 @@
       VISUAL = "nvim";
     };
 
-    # GTK, Qt and icon theming come from the shell, recoloured from the
-    # wallpaper (wl-hex docs/nix.md, "Theming from the wallpaper"). Home
-    # Manager's `gtk` module would fight it over gtk.css, so it stays off.
+    # kitty, foot, GTK and Qt get hecate's fixed haiiro templates
+    # (shell.theming.apps and .qt, on by default). Home Manager's `gtk` module
+    # would fight them over gtk.css, so it stays off.
 
-    home.pointerCursor = {
-      enable = true;
-      name = "Bibata-Modern-Classic";
-      package = pkgs.bibata-cursors;
-      size = 24;
-      x11.enable = true;
-    };
+    # The cursor is the haiiro pixel cursor (./theme).
+
+    # Claude Code and the shell's Claude features stay off, as on every desktop. Turning
+    # one on is all it takes (home-manager.users.<user>.cakeos.claude.<part>.enable, for
+    # example in gen/), since the paths they need come from the hecate flake here;
+    # hecate-mcp is its packages.hecate-mcp.
+    cakeos.claude =
+      let
+        shell = config.wayland.windowManager.hecate.shell.finalPackage;
+        mcpPackage = inputs.hecate.packages.${pkgs.stdenv.hostPlatform.system}.hecate-mcp or null;
+      in
+      {
+        hooks = {
+          script = lib.mkDefault "${shell}/${shell.config}/scripts/claude/hook.py";
+          python = lib.mkDefault "${shell.pythonEnv}/bin/python3";
+        };
+        mcp.package = lib.mkDefault mcpPackage;
+      };
   };
 }

@@ -84,13 +84,13 @@ if [ "$TARGET" != "installer" ]; then
     cp "$CURRENT_DIR/gen-presets/cakeos-hardware.nix" "$TEMP_DIR/gen/cakeos-hardware.nix"
 fi
 
-# HECATE_SRC=/path/to/wl-hex builds against a local hecate checkout instead of
+# HECATE_SRC=/path/to/hecate builds against a local hecate checkout instead of
 # the pinned flake input (see hecate-vm.sh). Copied like the flake itself, so
 # uncommitted changes are included, minus build output Nix would otherwise copy.
 NIX_BUILD_ARGS=()
 if [ -n "${HECATE_SRC:-}" ]; then
     if [ ! -f "$HECATE_SRC/flake.nix" ]; then
-        echo "HECATE_SRC=$HECATE_SRC has no flake.nix; point it at a wl-hex checkout."
+        echo "HECATE_SRC=$HECATE_SRC has no flake.nix; point it at a hecate checkout."
         exit 1
     fi
     echo "Using local hecate from $HECATE_SRC..."

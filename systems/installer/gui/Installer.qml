@@ -44,23 +44,23 @@ Singleton {
 
     readonly property var layoutChoices: ["us", "hu", "de", "fr", "es", "it", "pl", "cz", "sk", "ro", "hr", "si", "rs", "gb", "dk", "no", "se", "fi", "nl", "pt", "tr", "ru", "ua", "jp", "kr"]
     readonly property var groupChoices: [
-        { id: "gaming", name: "Gaming", icon: "sports_esports", description: "Steam, Proton, gamescope, Prism Launcher, mod managers" },
-        { id: "creative", name: "Creative", icon: "palette", description: "OBS Studio, Blockbench, draw.io, screen recording" },
-        { id: "development", name: "Development", icon: "code", description: "VSCodium, Neovim, JetBrains IDEA, toolchains, language servers" },
-        { id: "office", name: "Office", icon: "work", description: "OnlyOffice, Teams, Proton Pass, mail, Synology Drive" },
-        { id: "communication", name: "Communication", icon: "forum", description: "Discord (Vesktop)" },
-        { id: "media", name: "Media", icon: "music_note", description: "Spotify with Spicetify, Plexamp" },
-        { id: "flatpak", name: "Flatpak", icon: "deployed_code", description: "TeamSpeak, Tauon, HandBrake, Stremio, Karere" }
+        { id: "gaming", name: "gaming", description: "Steam, Proton, gamescope, Prism Launcher, mod managers" },
+        { id: "creative", name: "creative", description: "OBS Studio, Blockbench, draw.io, screen recording" },
+        { id: "development", name: "development", description: "VSCodium, Neovim, JetBrains IDEA, toolchains, language servers" },
+        { id: "office", name: "office", description: "OnlyOffice, Teams, Proton Pass, mail, Synology Drive" },
+        { id: "communication", name: "communication", description: "Discord (Vesktop)" },
+        { id: "media", name: "media", description: "Spotify with Spicetify, Plexamp" },
+        { id: "flatpak", name: "flatpak", description: "TeamSpeak, Tauon, HandBrake, Stremio, Karere" }
     ]
     readonly property var hardwareChoices: [
-        { id: "tablet", name: "Drawing tablets", icon: "draw", description: "OpenTabletDriver" },
-        { id: "airpods", name: "AirPods", icon: "earbuds", description: "LibrePods for AirPods controls" },
-        { id: "vpn", name: "VPN", icon: "vpn_lock", description: "Mullvad VPN client" }
+        { id: "tablet", name: "drawing tablets", description: "OpenTabletDriver" },
+        { id: "airpods", name: "airpods", description: "LibrePods for AirPods controls" },
+        { id: "vpn", name: "vpn", description: "Mullvad VPN client" }
     ]
     readonly property var kernelChoices: [
-        { id: "latest", name: "Latest", icon: "bolt", description: "Newest mainline kernel" },
-        { id: "cachyos", name: "CachyOS", icon: "speed", description: "Scheduler-patched, better desktop and game latency" },
-        { id: "lts", name: "LTS", icon: "shield", description: "Long-term support, most conservative" }
+        { id: "latest", name: "latest", description: "Newest mainline kernel" },
+        { id: "cachyos", name: "cachyos", description: "Scheduler-patched, better desktop and game latency" },
+        { id: "lts", name: "lts", description: "Long-term support, most conservative" }
     ]
 
     readonly property bool hostnameValid: /^[a-zA-Z0-9][a-zA-Z0-9-]{0,62}$/.test(hostname)
@@ -101,6 +101,9 @@ Singleton {
                         root.swapSize = p.swapDefault;
                     if (root.disks.length === 1 && root.disk === "")
                         root.disk = root.disks[0].path;
+                    // offline with a Wi-Fi adapter: have the networks listed already
+                    if (!root.online && root.hasWifi && root.networks.length === 0)
+                        root.scanWifi();
                 } catch (e) {
                     console.warn("probe failed:", e, text);
                 }
@@ -205,11 +208,11 @@ Singleton {
     property string error: ""
 
     readonly property var stages: [
-        { id: "partition", name: "Partition the disk" },
-        { id: "copy", name: "Copy CakeOS" },
-        { id: "hardware", name: "Detect hardware" },
-        { id: "config", name: "Write your configuration" },
-        { id: "build", name: "Build and install the system" }
+        { id: "partition", name: "partition the disk" },
+        { id: "copy", name: "copy CakeOS" },
+        { id: "hardware", name: "detect hardware" },
+        { id: "config", name: "write your configuration" },
+        { id: "build", name: "build and install the system" }
     ]
 
     function answers() {

@@ -1,5 +1,4 @@
 # The hand-picked GNOME/GTK app set (instead of `services.gnome.core-apps`).
-# Shared with hecate, whose desktop uses the same apps.
 pkgs: with pkgs; [
   nautilus
   gnome-text-editor
