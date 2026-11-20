@@ -212,13 +212,15 @@ cakeos.hecate.defaultApps = {
 </picture>
 </p>
 
-Under hecate the shell can talk to [Claude Code](https://claude.com/claude-code): an ask panel, a sessions panel with permission toasts, a usage widget, and an MCP server for the compositor. Nothing is sent without the chips you can see, and commands only run behind a button. The Apple side (AirPods through librepods, iCloud calendars, Photos and Drive, Cider) is off until you set it up. Both are Home Manager options:
+Under hecate the shell can talk to [Claude Code](https://claude.com/claude-code): an ask panel, a sessions panel with permission toasts, a usage widget, and an MCP server for the compositor. Nothing is sent without the chips you can see, and commands only run behind a button. The Apple side (AirPods through librepods, iCloud calendars, contacts, Photos and Drive, Cider) works with what Linux can reach. Both are off until you turn them on: in the shell's settings (services), and for what needs installing, with Home Manager options:
 
 ```nix
 home-manager.users.<you>.cakeos = {
-  # Claude: on by default under hecate, each part can be switched off
-  claude.hooks.enable = false;
-  claude.mcp.enable = false;
+  # Claude: off by default, each part switched on by itself
+  claude.cli.enable = true;    # Claude Code
+  claude.shell.enable = true;  # the shell's Claude switch, once
+  claude.hooks.enable = true;  # sessions panel and permission toasts
+  claude.mcp.enable = true;    # hecate-mcp for Claude Code
 
   # Apple: off until set up
   apple.icloudpd = { enable = true; username = "you@example.com"; };  # photos

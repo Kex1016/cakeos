@@ -122,12 +122,16 @@ input (Kex1016/hecate, public, fetched with the plain `github:` fetcher). Its
 (they only declare options) and enable them under the usual gate. Its apps are its own:
 `apps.nix` (kitty terminal apps with desktop entries, the Qt app set, and the
 `cakeos.hecate.defaultApps` options) and `mime.nix`; GNOME's app set and MIME file are not used.
-Qt apps follow KDE's platform theme. Theming is left to the bundled shell, which recolours them
-from the wallpaper, so `hecate/home.nix` must not enable Home Manager's `gtk` module (it would
-fight the shell over `gtk.css`).
+Qt apps follow KDE's platform theme. kitty, foot, GTK and Qt get hecate's fixed haiiro templates
+(its Home Manager module's `shell.theming.apps` and `.qt`: `gtk.css`, a seeded `kdeglobals` with the
+Haiiro colour scheme, kitty/foot includes, `monospace` as the haiiro mono stack); nothing is
+coloured from a wallpaper. `hecate/home.nix` must not enable Home Manager's `gtk` module (it would
+fight those templates over `gtk.css`). `hecate/system.nix` also puts the haiiro mono stack first in
+`fonts.fontconfig.defaultFonts.monospace`. The window frame is hecate's haiiro double frame: don't
+set `border.width` or `border.radius` in `hecate/home.nix`, its `settings` override the frame.
 Its login screen is not SDDM but `hecate-greetd` (the `hecate-greetd` flake input, which
-follows `hecate`): greetd running the bundled shell's lock screen inside hecate, with the
-wallpaper, colours, monitor layout and keyboard of the user being logged in. Each user's shell
+follows `hecate`): greetd running the bundled shell's lock screen inside hecate, always over the blob background,
+with the monitor layout, keyboard, input and cursor of the user being logged in. Each user's shell
 shares those by itself (`hecate-greetd sync` into `/var/lib/hecate-greetd/users/<user>`) and
 configures it under Settings → hecate-greetd. `cakeos.autoLogin` becomes greetd's
 `initial_session`. `HECATE_GREETD_SRC=<checkout> ./build-vm.sh hecate` builds against a local
@@ -245,10 +249,6 @@ the boot loaders, the console). `haiiro.nix` is the palette, named as the design
 { inherit pkgs; }` exports `haiiro`, `blobs { width, height, seed }`, `consoleFont` and `fonts`.
 `cursor/` is the haiiro pixel cursor theme.
 
-`palette.nix` is the older Material You palette (matugen tonal spot, dark, named like the shell's
-`colors.json`; `theme/update-palette.sh` regenerates it), with `colorsJson` and `wallpaper` from
-`wallpaper.py`. The installer GUI no longer reads them, so they are candidates for removal.
-
 ### Options added with the haiiro shell
 
 - `cakeos.hecate.defaultApps` (hecate, `apps.nix`): one role per default app, each a desktop-file
@@ -272,9 +272,10 @@ the boot loaders, the console). `haiiro.nix` is the palette, named as the design
   come from the shell). `mcp` adds `hecate-mcp` as a user MCP server, writing
   `~/.config/hecate/mcp.toml`; `allow` (default `["tint"]`) sets what it may change, and
   `screenshots` (default true) offers the screenshot tool. `shell` turns on the shell's own
-  Claude switch, only while that setting is missing. The hecate desktop turns cli, hooks and
-  shell on (`mkDefault`), and mcp too now that hecate exports `hecate-mcp`. Set
-  `cakeos.claude.<option>.enable = false` in `gen/<config>.nix` to opt out.
+  Claude switch, only while that setting is missing (a switch-off in the shell sticks). All four
+  are off by default on every desktop, hecate included; the hecate desktop only fills in the
+  paths they need (hook.py and its python, `hecate-mcp` from the hecate flake), so opting in is
+  `home-manager.users.<user>.cakeos.claude.<part>.enable = true` (in `gen/<config>.nix`, say).
 - `cakeos.apple.icloudpd` (iCloud Photos albums on a timer: `username`, `directory`, `albums`,
   `interval`) and `cakeos.apple.rclone` (iCloud Drive mounted as a user service: `remote`,
   `mountPoint`; not with Advanced Data Protection). Both are in `modules/home/apps/apple.nix`,
