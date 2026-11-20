@@ -24,12 +24,9 @@
       # keybind and layer-rule profiles (docs/keybinds.md in hecate).
       shell.enable = true;
       settings = {
-        border = {
-          width = 2;
-          radius = 12;
-          # Maximized windows keep their border and rounded corners (hecate's default drops both).
-          keep_on_maximize = true;
-        };
+        # The frame is haiiro's (5px double pine, square, from hecate's module); maximized
+        # windows keep it (hecate's default drops it).
+        border.keep_on_maximize = true;
         # Same layouts as the console and the other desktops (modules/system/core/locale.nix
         # splits cakeos.keyboardLayouts into these).
         keyboard = {
