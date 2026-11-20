@@ -51,11 +51,11 @@ KEEP_DISK=1 ./build-installer.sh empty   # boots that persistent disk (post-inst
 ./build-vm.sh plasma
 ./build-vm.sh hecate      # boots with virtio-vga-gl (virgl), since hecate renders with GLES
 
-# Boot the hecate desktop built from a local wl-hex checkout, uncommitted changes
+# Boot the hecate desktop built from a local hecate checkout, uncommitted changes
 # included (copies it into the temp workspace, minus target/ and .git, and passes
-# --override-input hecate path:...). Defaults to ../wl-hex.
-./hecate-vm.sh [path/to/wl-hex]
-# Same thing for any preset: HECATE_SRC=/path/to/wl-hex ./build-vm.sh <preset>
+# --override-input hecate path:...). Defaults to ../hecate.
+./hecate-vm.sh [path/to/hecate]
+# Same thing for any preset: HECATE_SRC=/path/to/hecate ./build-vm.sh <preset>
 
 # Format nix files (repo uses nixfmt-style formatting; check before assuming a formatter is wired in)
 nixfmt <file>.nix
@@ -91,8 +91,8 @@ one into a temp `gen/cakeos.nix` before building.
   `gen/` files to import.
 - `cakeosDesktops` is a flake output listing the available desktops (`modules/desktops/list.nix`).
   The installers read that file directly (`nix eval --json --file .../list.nix`), not the flake
-  output: evaluating the flake fetches inputs, which fails offline and for the private hecate
-  inputs (the ISO has no GitHub credentials).
+  output: evaluating the flake fetches inputs, which fails offline (the ISO has no network
+  until the user connects).
 - `commonSystemModules` are shared by every host: disko, home-manager, spicetify, `system.nix`.
   `installer` does not use them — it is built on `installation-cd-base.nix` + disko.
 
@@ -117,7 +117,7 @@ Each `modules/desktops/<de>/` provides:
   out, or switching would hide it from the other one
 
 `hecate/` is the exception to "DE packages from nixpkgs": it comes from the `hecate` flake
-input (Kex1016/wl-hex, private, hence `git+https` so git's credentials are used). Its
+input (Kex1016/hecate, public, fetched with the plain `github:` fetcher). Its
 `system.nix` and `home.nix` import that flake's NixOS and Home Manager modules unconditionally
 (they only declare options) and enable them under the usual gate. It borrows GNOME's GTK app
 set (`modules/desktops/gnome/apps.nix`, a plain `pkgs: [ ... ]` list both import) and GNOME's
@@ -313,8 +313,7 @@ build/install-time tooling that must run before nushell is on the target.
   (renamed) options and `hardware.nvidia`: unset defaults of other modules can fail in ways
   `tryEval` can't catch. If it still fails, the script checks the system's `drvPath` instead
   and reports that preset without details.
-- Both need the `FLAKE_INPUTS_TOKEN` secret (Contents: read on the private Kex1016/wl-hex and
-  Kex1016/hecate-greetd) to fetch those inputs.
+- hecate and hecate-greetd are public, so neither workflow needs a token for them.
 
 ## Adding a desktop environment
 

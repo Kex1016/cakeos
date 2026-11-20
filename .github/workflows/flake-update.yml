@@ -5,9 +5,8 @@ name: Update flake inputs
 # (.github/flake-update/). Runs on every push to main, weekly, when hecate or hecate-greetd
 # publish a new commit (repository_dispatch from their own workflows), and by hand.
 #
-# Needs the FLAKE_INPUTS_TOKEN secret: a fine-grained token with Contents: read on the private
-# inputs (Kex1016/wl-hex, Kex1016/hecate-greetd). The commit itself is pushed with the
-# workflow's own token, which doesn't start another run.
+# hecate and hecate-greetd are public, so no extra token is needed. The commit itself is pushed
+# with the workflow's own token, which doesn't start another run.
 
 on:
   push:
@@ -33,15 +32,6 @@ jobs:
     # wouldn't stop a manual run on another branch.
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Check for the inputs token
-        env:
-          TOKEN: ${{ secrets.FLAKE_INPUTS_TOKEN }}
-        run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::error::Add a FLAKE_INPUTS_TOKEN secret (fine-grained token, Contents: read on Kex1016/wl-hex and Kex1016/hecate-greetd); the private inputs can't be fetched without it."
-            exit 1
-          fi
-
       - name: Checkout main
         uses: actions/checkout@v4
         with:
@@ -51,7 +41,7 @@ jobs:
         uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
-            access-tokens = github.com=${{ secrets.FLAKE_INPUTS_TOKEN }}
+            access-tokens = github.com=${{ github.token }}
             accept-flake-config = false
 
       - name: Update and report

@@ -18,7 +18,7 @@
     wayland.windowManager.hecate = {
       enable = true;
       # The bundled end-4 shell: bar, sidebars, launcher, lock screen, its
-      # keybind and layer-rule profiles (docs/keybinds.md in wl-hex).
+      # keybind and layer-rule profiles (docs/keybinds.md in hecate).
       shell.enable = true;
       settings = {
         border = {
@@ -52,7 +52,7 @@
     };
 
     # GTK, Qt and icon theming come from the shell, recoloured from the
-    # wallpaper (wl-hex docs/nix.md, "Theming from the wallpaper"). Home
+    # wallpaper (hecate docs/nix.md, "Theming from the wallpaper"). Home
     # Manager's `gtk` module would fight it over gtk.css, so it stays off.
 
     home.pointerCursor = {
