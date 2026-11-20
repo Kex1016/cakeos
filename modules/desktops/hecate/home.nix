@@ -41,9 +41,9 @@
         # Touchpads keep adaptive. The shell's hecate settings page can
         # change both per session.
         input."type:pointer".accel_profile = "flat";
-        # Login splash pictures (wallpaper and shell, no windows) go where hecate-greetd's login
-        # screen can read them, so a login fades straight into the desktop.
-        splash.dir = "/var/lib/hecate-greetd/users/${config.home.username}/splash";
+        # The blob background is left where hecate-greetd's login screen picks it up at
+        # logout, so the greeter carries on from the session's blobs.
+        background.blobs.save = "/var/lib/hecate-greetd/users/${config.home.username}/blobs.json";
       };
     };
 
@@ -54,14 +54,13 @@
       VISUAL = "nvim";
     };
 
-    # GTK, Qt and icon theming come from the shell, recoloured from the
-    # wallpaper (hecate docs/nix.md, "Theming from the wallpaper"). Home
+    # GTK, Qt and icon theming come from the shell's haiiro tokens. Home
     # Manager's `gtk` module would fight it over gtk.css, so it stays off.
 
     # The cursor is the haiiro pixel cursor (./theme).
 
     # Claude Code and the shell's Claude features, off for any desktop but this
-    # one. hecate-mcp comes from the hecate flake once it exports it.
+    # one. hecate-mcp comes from the hecate flake (packages.hecate-mcp).
     cakeos.claude =
       let
         shell = config.wayland.windowManager.hecate.shell.finalPackage;
