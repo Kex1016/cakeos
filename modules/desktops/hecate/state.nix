@@ -2,10 +2,11 @@
 # the running desktop. See ../gnome/state.nix for how `cakeos-wm` uses this.
 {
   paths = [
-    ".config/hecate" # shell.toml, colors.toml (config.toml is Home Manager's)
+    ".config/hecate" # shell.toml, calendars.toml (config.toml and mcp.toml are Home Manager's)
     ".config/illogical-impulse" # the shell's settings
     ".local/state/quickshell" # generated colours, wallpaper, first-run marker
-    ".cache/quickshell"
+    ".cache/quickshell" # wallpaper previews (dithered), notification history
+    ".local/share/hecate" # the shell's local calendar (calendars/local.ics)
     # Wallpaper theming output (matugen, kde-material-you-colors, the shell's
     # icon recolouring).
     ".config/gtk-3.0/gtk.css"
