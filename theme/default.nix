@@ -1,14 +1,11 @@
-# The CakeOS palette and default wallpaper, shared by everything that themes
-# itself outside the hecate shell (the installer, the boot loaders).
+# The haiiro look for everything that themes itself outside the hecate shell
+# (the installer console, the boot loaders).
 #   theme = import ./theme { inherit pkgs; };
 #
-# Two palettes live here. `colors`/`colorsJson`/`wallpaper` are the older
-# Material You set the installer's GUI still reads. `haiiro` is the haiiro
-# design system's Rosé Pine palette: the boot menus and the installer console
-# use it, with `blobs` for the background and `fonts` for the bitmap faces.
+# `haiiro` is the haiiro design system's Rosé Pine palette, with `blobs` for the
+# background and `fonts` for the bitmap faces.
 { pkgs }:
 let
-  palette = import ./palette.nix;
   haiiro = import ./haiiro.nix;
 
   python = pkgs.python3.withPackages (ps: [
@@ -18,19 +15,7 @@ let
   ]);
 in
 rec {
-  inherit (palette) seed colors;
   inherit haiiro python;
-
-  # Same shape as the shell's ~/.local/state/quickshell/user/generated/colors.json.
-  colorsJson = pkgs.writeText "cakeos-colors.json" (builtins.toJSON colors);
-
-  wallpaperSvg = pkgs.runCommand "cakeos-wallpaper.svg" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-    python3 ${./wallpaper.py} ${pkgs.writeText "palette.json" (builtins.toJSON palette)} > $out
-  '';
-
-  wallpaper = pkgs.runCommand "cakeos-wallpaper.png" { nativeBuildInputs = [ pkgs.resvg ]; } ''
-    resvg ${wallpaperSvg} $out
-  '';
 
   # haiiro, for the boot menus: the palette as JSON for the drawing scripts.
   haiiroJson = pkgs.writeText "haiiro-palette.json" (builtins.toJSON haiiro);
