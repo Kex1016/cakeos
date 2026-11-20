@@ -77,6 +77,10 @@ in
     c.text # bright white
   ];
 
+  # The console face: IBM VGA 8x16 with Latin Extended-A and the glyphs the
+  # TUI draws (see theme/console-font.py). Replaces the ISO's Terminus.
+  console.font = "${theme.consoleFont}/share/consolefonts/haiiro.psf";
+
   # Root's prompt on the ISO, for when the installer drops to a shell: the
   # site's prompt line, `@ ~/path » `, in love, foam and rose.
   programs.bash.promptInit = ''

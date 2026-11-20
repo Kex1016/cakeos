@@ -58,6 +58,15 @@ rec {
     unifontGrub = "${pkgs.grub2}/share/grub/unicode.pf2";
   };
 
+  # The Linux console font: IBM VGA 8x16 with Latin Extended-A (and the glyphs
+  # the installer's TUI draws) from Unifont, as a PSF2 with a Unicode table.
+  # `console.font = "${theme.consoleFont}/share/consolefonts/haiiro.psf"`.
+  consoleFont = pkgs.runCommand "haiiro-console-font" { } ''
+    mkdir -p $out/share/consolefonts
+    ${python}/bin/python ${./console-font.py} $out/share/consolefonts/haiiro.psf \
+      ${fonts.ibm} ${fonts.unifont}
+  '';
+
   # One still frame of the live blobs background (see blobs.py), `width` x
   # `height`, scaled in whole pixels only: cells are 6px.
   blobs =
