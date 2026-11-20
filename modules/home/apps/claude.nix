@@ -15,8 +15,8 @@
 # disable). Existing hooks, and every other setting, are left as they are.
 #
 # The rest of the Claude Code side of the hecate desktop lives here too, each part
-# off until switched on: the CLI (cakeos.claude.cli), hecate-mcp registered as an
-# MCP server (cakeos.claude.mcp) and the shell's own Claude switch
+# off until switched on, on every desktop: the CLI (cakeos.claude.cli), hecate-mcp
+# registered as an MCP server (cakeos.claude.mcp) and the shell's own Claude switch
 # (cakeos.claude.shell).
 let
   cfg = config.cakeos.claude.hooks;
@@ -243,7 +243,7 @@ in
         mkdir -p "$(dirname "$cfg")"
         [ -e "$cfg" ] || echo '{}' > "$cfg"
         if "$jq" -e . "$cfg" >/dev/null 2>&1 \
-            && [ "$("$jq" '.claude.enable // "unset"' "$cfg")" = '"unset"' ]; then
+            && "$jq" -e '.claude.enable == null' "$cfg" >/dev/null 2>&1; then
             tmp=$(mktemp)
             "$jq" '.claude.enable = true' "$cfg" > "$tmp" && cat "$tmp" > "$cfg"
             rm -f "$tmp"

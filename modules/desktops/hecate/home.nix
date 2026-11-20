@@ -51,30 +51,27 @@
       VISUAL = "nvim";
     };
 
-    # GTK, Qt and icon theming come from the shell's haiiro tokens. Home
-    # Manager's `gtk` module would fight it over gtk.css, so it stays off.
+    # kitty, foot, GTK and Qt get hecate's fixed haiiro templates
+    # (shell.theming.apps and .qt, on by default). Home Manager's `gtk` module
+    # would fight them over gtk.css, so it stays off.
 
     # The cursor is the haiiro pixel cursor (./theme).
 
-    # Claude Code and the shell's Claude features, off for any desktop but this
-    # one. hecate-mcp comes from the hecate flake (packages.hecate-mcp).
+    # Claude Code and the shell's Claude features stay off, as on every desktop. Turning
+    # one on is all it takes (home-manager.users.<user>.cakeos.claude.<part>.enable, for
+    # example in gen/), since the paths they need come from the hecate flake here;
+    # hecate-mcp is its packages.hecate-mcp.
     cakeos.claude =
       let
         shell = config.wayland.windowManager.hecate.shell.finalPackage;
         mcpPackage = inputs.hecate.packages.${pkgs.stdenv.hostPlatform.system}.hecate-mcp or null;
       in
       {
-        cli.enable = lib.mkDefault true;
-        shell.enable = lib.mkDefault true;
         hooks = {
-          enable = lib.mkDefault true;
           script = lib.mkDefault "${shell}/${shell.config}/scripts/claude/hook.py";
           python = lib.mkDefault "${shell.pythonEnv}/bin/python3";
         };
-        mcp = {
-          enable = lib.mkDefault (mcpPackage != null);
-          package = lib.mkDefault mcpPackage;
-        };
+        mcp.package = lib.mkDefault mcpPackage;
       };
   };
 }
