@@ -11,9 +11,11 @@
 # GNU Unifont as the glyph fallback). Everything else is drawn by the shell
 # itself from its own tokens.
 let
-  # hecate's nix/fonts.nix, called directly so this does not wait for the
-  # flake to export it as a package.
-  haiiroFonts = pkgs.callPackage "${inputs.hecate}/nix/fonts.nix" { };
+  # The hecate flake's package (its Home Manager module installs the same one);
+  # an older hecate without it still has nix/fonts.nix.
+  haiiroFonts =
+    inputs.hecate.packages.${pkgs.stdenv.hostPlatform.system}.haiiro-fonts
+      or (pkgs.callPackage "${inputs.hecate}/nix/fonts.nix" { });
 in
 {
   imports = [ ../../../home/apps/cursor.nix ];
