@@ -191,66 +191,116 @@ let
   };
 in
 
-lib.mkIf (cfg.desktop == "hecate") {
-  # Qt/KDE apps. All of them ask for server-side decorations (Qt's xdg-decoration
-  # support) and take colours from the KDE platform theme the shell writes.
-  environment.systemPackages =
-    with pkgs;
-    [
-      # Terminal apps (the entries above run them in kitty), and what Yazi's
-      # previews call out to.
-      yazi
-      btop
-      cmus
-      gdu
-      caligula
-      ffmpegthumbnailer
-      poppler-utils
-      imagemagick
-      resvg
-      fd
-      ripgrep
-      fzf
-      jq
-      p7zip
-      file
+{
+  options.cakeos.hecate.defaultApps =
+    let
+      appOption =
+        description: default: example:
+        lib.mkOption {
+          type = lib.types.coercedTo lib.types.str lib.singleton (lib.types.listOf lib.types.str);
+          inherit default example;
+          description = ''
+            ${description}
 
-      kdiff3 # Meld
-      wayland-utils
-    ]
-    ++ (with kdePackages; [
-      dolphin # Nautilus, for drag and drop and the places panel; Yazi is the default
-      kio-extras # smb://, mtp://, thumbnails of everything Dolphin lists
-      ffmpegthumbs
-      kdegraphics-thumbnailers
-      kimageformats # avif, heif, jxl, psd for Gwenview and the thumbnailers
-      gwenview # Loupe
-      okular # Papers: pdf, epub, comics
-      ark # File Roller
-      kolourpaint # Drawing
-      filelight # Disk Usage Analyzer
-      skanpage # Simple Scan
-      krdc # Connections
-      ksystemlog # Logs
-      plasma-systemmonitor # Resources and System Monitor; the shell's task manager button
-      # What the shell's own buttons start (apps.* in its config): the network and
-      # Bluetooth pages, as kcmshell6 modules.
-      kcmutils
-      plasma-nm
-      bluedevil
-    ]);
+            A desktop file id (`yazi.desktop`) or a list of them, first choice first. The
+            ids of what hecate installs: `yazi.desktop` and `org.kde.dolphin.desktop` (files),
+            `nvim.desktop` and `org.kde.kate.desktop` (text), `org.kde.gwenview.desktop`,
+            `org.kde.okular.desktop`, `org.kde.ark.desktop`, `mpv.desktop`, `zen-beta.desktop`.
+            `ls /run/current-system/sw/share/applications ~/.local/share/applications`
+            lists every id on a running system.
+          '';
+        };
+    in
+    {
+      fileManager = appOption "What opens folders." "yazi.desktop" "org.kde.dolphin.desktop";
+      textEditor =
+        appOption "What opens text, source and config files." "nvim.desktop"
+          "org.kde.kate.desktop";
+      imageViewer = appOption "What opens pictures." "org.kde.gwenview.desktop" "imv.desktop";
+      documentViewer =
+        appOption "What opens pdf, epub, comics and djvu." "org.kde.okular.desktop"
+          "org.pwmt.zathura.desktop";
+      archiver = appOption "What opens archives and disc images." "org.kde.ark.desktop" "yazi.desktop";
+      videoPlayer = appOption "What opens video." "mpv.desktop" "haruna.desktop";
+      audioPlayer = appOption "What opens audio." "mpv.desktop" "cmus.desktop";
+      browser = appOption "What opens web links and html." "zen-beta.desktop" "firefox.desktop";
+      mimeTypes = lib.mkOption {
+        type = lib.types.attrsOf (
+          lib.types.coercedTo lib.types.str lib.singleton (lib.types.listOf lib.types.str)
+        );
+        default = { };
+        example = {
+          "application/x-shellscript" = "org.kde.kate.desktop";
+          "image/svg+xml" = [ "org.kde.okular.desktop" ];
+        };
+        description = ''
+          Per-type overrides, applied after the role defaults above: any MIME type
+          to the desktop file ids that should open it.
+        '';
+      };
+    };
 
-  # Partition Manager (Disks); its helper needs this service and polkit rules.
-  programs.partition-manager.enable = true;
+  config = lib.mkIf (cfg.desktop == "hecate") {
+    # Qt/KDE apps. All of them ask for server-side decorations (Qt's xdg-decoration
+    # support) and take colours from the KDE platform theme the shell writes.
+    environment.systemPackages =
+      with pkgs;
+      [
+        # Terminal apps (the entries above run them in kitty), and what Yazi's
+        # previews call out to.
+        yazi
+        btop
+        cmus
+        gdu
+        caligula
+        ffmpegthumbnailer
+        poppler-utils
+        imagemagick
+        resvg
+        fd
+        ripgrep
+        fzf
+        jq
+        p7zip
+        file
 
-  home-manager.sharedModules = [
-    # The MIME defaults that point at the apps above.
-    ./mime.nix
-    (
-      { osConfig, ... }:
-      lib.mkIf (osConfig.cakeos.desktop == "hecate") {
-        xdg.desktopEntries = terminalApps;
-      }
-    )
-  ];
+        kdiff3 # Meld
+        wayland-utils
+      ]
+      ++ (with kdePackages; [
+        dolphin # Nautilus, for drag and drop and the places panel; Yazi is the default
+        kio-extras # smb://, mtp://, thumbnails of everything Dolphin lists
+        ffmpegthumbs
+        kdegraphics-thumbnailers
+        kimageformats # avif, heif, jxl, psd for Gwenview and the thumbnailers
+        gwenview # Loupe
+        okular # Papers: pdf, epub, comics
+        ark # File Roller
+        kolourpaint # Drawing
+        filelight # Disk Usage Analyzer
+        skanpage # Simple Scan
+        krdc # Connections
+        ksystemlog # Logs
+        plasma-systemmonitor # Resources and System Monitor; the shell's task manager button
+        # What the shell's own buttons start (apps.* in its config): the network and
+        # Bluetooth pages, as kcmshell6 modules.
+        kcmutils
+        plasma-nm
+        bluedevil
+      ]);
+
+    # Partition Manager (Disks); its helper needs this service and polkit rules.
+    programs.partition-manager.enable = true;
+
+    home-manager.sharedModules = [
+      # The MIME defaults that point at the apps above.
+      ./mime.nix
+      (
+        { osConfig, ... }:
+        lib.mkIf (osConfig.cakeos.desktop == "hecate") {
+          xdg.desktopEntries = terminalApps;
+        }
+      )
+    ];
+  };
 }

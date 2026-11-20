@@ -7,20 +7,23 @@
 # What opens what under hecate: the apps in apps.nix, with the browser and the chat
 # and game handlers carried over from the GNOME defaults this replaces.
 #
-# Every entry names a desktop file by id. The ids are the apps' own
-# (org.kde.gwenview.desktop, ...) except the three terminal apps, whose entries
-# apps.nix writes (yazi, nvim) or the browser's, which Home Manager writes
-# (programs.zen-browser, modules/home/apps/browsers.nix).
+# Every entry names a desktop file by id. Which app each role (folders, text, images,
+# ...) gets is the option cakeos.hecate.defaultApps, declared in apps.nix; set it in
+# gen/<config>.nix, e.g. `cakeos.hecate.defaultApps.fileManager = "org.kde.dolphin.desktop";`.
+# The ids of the terminal apps are written by apps.nix (yazi, nvim); the browser's by
+# Home Manager (programs.zen-browser, modules/home/apps/browsers.nix).
 
 let
-  textEditor = [ "nvim.desktop" ];
-  fileManager = [ "yazi.desktop" ];
-  videoPlayer = [ "mpv.desktop" ];
-  audioPlayer = [ "mpv.desktop" ];
-  imageViewer = [ "org.kde.gwenview.desktop" ];
-  docViewer = [ "org.kde.okular.desktop" ];
-  archiver = [ "org.kde.ark.desktop" ];
-  browser = [ "zen-beta.desktop" ];
+  # Chosen with cakeos.hecate.defaultApps (apps.nix); the defaults are the apps it installs.
+  choice = osConfig.cakeos.hecate.defaultApps;
+  textEditor = choice.textEditor;
+  fileManager = choice.fileManager;
+  videoPlayer = choice.videoPlayer;
+  audioPlayer = choice.audioPlayer;
+  imageViewer = choice.imageViewer;
+  docViewer = choice.documentViewer;
+  archiver = choice.archiver;
+  browser = choice.browser;
 
   forEach = types: app: lib.genAttrs types (_: app);
 
@@ -125,7 +128,8 @@ let
       "x-scheme-handler/ror2mm" = [ "r2modman.desktop" ];
       "x-scheme-handler/abc" = [ "plexamp.desktop" ];
       "x-scheme-handler/claude-cli" = [ "claude-code-url-handler.desktop" ];
-    };
+    }
+    // choice.mimeTypes;
 in
 
 lib.mkIf (osConfig.cakeos.desktop == "hecate") {
