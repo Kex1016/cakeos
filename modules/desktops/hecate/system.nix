@@ -25,10 +25,22 @@
       gaming.enable = builtins.elem "gaming" config.cakeos.groups;
     };
 
-    # The login screen is the shell's lock screen (hecate-greetd on greetd), with
-    # the wallpaper, colours, monitor layout and keyboard of whoever logs in. Each
-    # user's shell shares those on its own; Settings → hecate-greetd configures it.
-    services.hecate-greetd.enable = true;
+    # The login screen is hecate-greetd on greetd: the haiiro login screen over
+    # hecate's moving blobs, with the monitor layout and keyboard of whoever logs in
+    # (each user's shell shares those on its own; Settings → hecate-greetd). The
+    # pointer is the haiiro pixel cursor before anyone has synced.
+    services.hecate-greetd =
+      let
+        cursor = pkgs.callPackage ../../../theme/cursor { };
+      in
+      {
+        enable = true;
+        extraPackages = [ cursor ];
+        settings.cursor = {
+          theme = cursor.themeName;
+          size = 24;
+        };
+      };
 
     services = {
       displayManager = {
