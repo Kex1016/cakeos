@@ -133,11 +133,9 @@ let
 in
 
 lib.mkIf (osConfig.cakeos.desktop == "hecate") {
-  # modules/desktops/gnome/mime.nix still gates on "hecate" as well (it did when hecate
-  # borrowed the GNOME apps); mkForce makes these win over it until that gate is dropped.
   xdg.mimeApps = {
     enable = true;
-    defaultApplications = lib.mkForce associations;
-    associations.added = lib.mkForce associations;
+    defaultApplications = associations;
+    associations.added = associations;
   };
 }
