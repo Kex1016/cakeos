@@ -265,11 +265,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795304835,
-        "narHash": "sha256-V+zg5tR6K6m6zHuox2FUceHNdk0MXhaFJeUwrq5omnQ=",
+        "lastModified": 1795305017,
+        "narHash": "sha256-jOt/UMgmp1CL8+XWjsRsIKZi5VVIHmj0L9InrfUQyJ0=",
         "owner": "Kex1016",
         "repo": "hecate",
-        "rev": "1f3e21f8b835ad9f78394657d0cdb53295c68b2a",
+        "rev": "6fea0710bfeb6661aa4387a6fccd1cef13d7f7ff",
         "type": "github"
       },
       "original": {
