@@ -125,7 +125,10 @@ input (Kex1016/hecate, public, fetched with the plain `github:` fetcher). Its
 Qt apps follow KDE's platform theme. kitty, foot, GTK and Qt get hecate's fixed haiiro templates
 (its Home Manager module's `shell.theming.apps` and `.qt`: `gtk.css`, a seeded `kdeglobals` with the
 Haiiro colour scheme, kitty/foot includes, `monospace` as the haiiro mono stack); nothing is
-coloured from a wallpaper. `hecate/home.nix` must not enable Home Manager's `gtk` module (it would
+coloured from a wallpaper. Zen Browser gets hecate's `nix/haiiro/zen/` templates through
+`hecate/theme/zen.nix`: `userChrome.css`, `userContent.css`, `prefs.nix` as profile settings, the
+two kept mods, and `motion.cfg.js` as autoconfig (`extraPrefsFiles`), which cuts Zen's own motion
+without `ui.prefersReducedMotion`. `hecate/home.nix` must not enable Home Manager's `gtk` module (it would
 fight those templates over `gtk.css`). `hecate/system.nix` also puts the haiiro mono stack first in
 `fonts.fontconfig.defaultFonts.monospace`. The window frame is hecate's haiiro double frame: don't
 set `border.width` or `border.radius` in `hecate/home.nix`, its `settings` override the frame.
