@@ -108,7 +108,7 @@ lib.mkIf (builtins.elem "communication" osConfig.cakeos.groups) {
           mode = "nick-user";
           friendNicknames = "fallback";
         };
-        SilentTyping.enabled = true;
+        SilentTyping.enabled = false;
         TypingIndicator.enabled = true;
         ThemeAttributes.enabled = true;
         TypingTweaks.enabled = true;
@@ -117,7 +117,7 @@ lib.mkIf (builtins.elem "communication" osConfig.cakeos.groups) {
         ValidUser.enabled = true;
         YoutubeAdblock.enabled = true;
         IrcColors = {
-          enabled = true;
+          enabled = false;
           lightness = 70;
         };
       };
