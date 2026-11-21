@@ -8,9 +8,11 @@
 
 # The haiiro look of the hecate desktop outside the shell: the pixel cursor, the
 # haiiro fonts with their fontconfig fallback order (IBM VGA, Jacquard 24, GNU
-# Unifont as the glyph fallback) and Zen Browser (zen.nix). The shell draws
-# itself from its own tokens, and hecate's Home Manager module gives kitty, foot,
-# GTK, Qt and `monospace` their fixed haiiro templates (shell.theming.apps and .qt).
+# Unifont as the glyph fallback), Zen Browser (zen.nix), Vesktop (vesktop.nix) and
+# Cider (cider.nix).
+# The shell draws itself from its own tokens, and hecate's Home Manager module
+# gives kitty, foot, GTK, Qt and `monospace` their fixed haiiro templates
+# (shell.theming.apps and .qt).
 let
   # The hecate flake's package (its Home Manager module installs the same one);
   # an older hecate without it still has nix/fonts.nix.
@@ -21,6 +23,8 @@ in
 {
   imports = [
     ../../../home/apps/cursor.nix
+    ./cider.nix
+    ./vesktop.nix
     ./zen.nix
   ];
 
