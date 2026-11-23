@@ -7,9 +7,7 @@
     ./modules/cakeos/affinity.nix
   ];
 
-  boot.loader.limine.enable = true;
-  boot.loader.limine.maxGenerations = 5;
-  boot.loader.efi.canTouchEfiVariables = true;
+  # The boot loader (GRUB, BIOS and UEFI) is modules/system/core/grub.nix.
   boot.blacklistedKernelModules = [ "wacom" ]; # on my terms, bitch
 
   security.pki.certificateFiles = [

@@ -77,6 +77,20 @@
       description = "System time zone.";
     };
 
+    virtualMachine = lib.mkOption {
+      type = lib.types.enum [
+        "none"
+        "vmware"
+        "qemu"
+      ];
+      default = "none";
+      description = ''
+        The hypervisor the installer found itself running under
+        (`systemd-detect-virt`), which turns on that hypervisor's guest
+        integration (modules/system/core/vm-guest.nix).
+      '';
+    };
+
     keyboardLayouts = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [

@@ -11,6 +11,13 @@
       content = {
         type = "gpt";
         partitions = {
+          # GRUB's BIOS core lives here (disko puts EF02 first). With it and the
+          # ESP both on the disk, the install boots under BIOS and UEFI alike.
+          bios = {
+            size = "1M";
+            type = "EF02";
+          };
+
           ESP = {
             size = "1G";
             type = "EF00";

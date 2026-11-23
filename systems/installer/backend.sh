@@ -184,6 +184,30 @@ stage() {
     fi
 }
 
+# The disk's stable /dev/disk/by-id name, for GRUB's BIOS install (sdX names
+# can move between boots). Virtual disks often have none; then the plain path.
+disk_by_id() {
+    local link target
+    target=$(readlink -f "$1")
+    for link in /dev/disk/by-id/*; do
+        case "$link" in *-part[0-9]*|*/wwn-*|*/nvme-eui.*) continue ;; esac
+        if [ "$(readlink -f "$link")" = "$target" ]; then
+            echo "$link"
+            return
+        fi
+    done
+    echo "$1"
+}
+
+# The hypervisor this runs under, as `cakeos.virtualMachine` spells it.
+virtual_machine() {
+    case "$(systemd-detect-virt --vm 2>/dev/null || true)" in
+        vmware) echo vmware ;;
+        qemu | kvm) echo qemu ;;
+        *) echo none ;;
+    esac
+}
+
 nix_list() {
     local out="" item
     for item in "$@"; do out+="\"$item\" "; done
@@ -276,6 +300,16 @@ cmd_install() {
     rm -rf "$TARGET_ROOT/etc/nixos"
 
     stage config "Writing your choices into gen/$config.nix"
+    local boot_dev virt boot_efi=""
+    boot_dev=$(disk_by_id "$disk")
+    virt=$(virtual_machine)
+    # Booted under BIOS there are no EFI variables to write, so GRUB's EFI half
+    # goes to the removable path (EFI/BOOT/BOOTX64.EFI), which any UEFI finds.
+    if [ ! -d /sys/firmware/efi ]; then
+        boot_efi="  boot.loader.efi.canTouchEfiVariables = false;
+  boot.loader.grub.efiInstallAsRemovable = true;"
+    fi
+    log "Boot: GRUB on $boot_dev, $([ -d /sys/firmware/efi ] && echo UEFI || echo BIOS) firmware; virtual machine: $virt"
     local mainframe=""
     if [ "$mf" = true ]; then
         mainframe="    mainframe = {
@@ -306,12 +340,17 @@ cmd_install() {
   };
   users.users.root.initialHashedPassword = "$root_hash";
 
+  # GRUB: the BIOS core on this disk, the EFI binary on its ESP.
+  boot.loader.grub.devices = [ "$boot_dev" ];
+$boot_efi
+
   cakeos = {
     desktop = "$desktop";
     primaryUser = "$user";
     autoLogin = $autologin;
 $mainframe
     kernel = "$kernel";
+    virtualMachine = "$virt";
     timeZone = "$tz";
     keyboardLayouts = $(nix_list "${layouts[@]}");
     groups = $(nix_list "${groups[@]}");
