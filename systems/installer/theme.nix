@@ -17,7 +17,7 @@ let
 in
 {
   isoImage = {
-    grubTheme = import ./grub-theme.nix { inherit pkgs theme; };
+    grubTheme = theme.grubTheme;
     splashImage = splash;
     # vesamenu.c32 uses the VGA 8x16 font, which is IBM VGA already. It lays the
     # menu out in 8x16 cells (rows start 8px down the screen); the window in the

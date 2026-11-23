@@ -1,10 +1,11 @@
 { pkgs, theme }:
 
-# The ISO's GRUB menu in haiiro: live-blobs night sky, a Jacquard 24 title, and
-# the entries in a haiiro Window (5px double pine frame), each selected row a
-# band with a rose » in front. theme/grub-art.py draws the pictures and writes
-# theme.txt; the fonts are IBM VGA 8x16 converted at 16px and 32px, with GNU
-# Unifont loaded behind them (GRUB falls back across loaded fonts glyph by glyph).
+# The GRUB menu in haiiro, on the ISO and on installed systems: live-blobs
+# night sky, a Jacquard 24 title, and the entries in a haiiro Window (5px
+# double pine frame), each selected row a band with a rose » in front.
+# theme/grub-art.py draws the pictures and writes theme.txt; the fonts are IBM
+# VGA 8x16 converted at 16px and 32px, with GNU Unifont loaded behind them
+# (GRUB falls back across loaded fonts glyph by glyph).
 pkgs.runCommand "cakeos-grub-theme"
   {
     nativeBuildInputs = [

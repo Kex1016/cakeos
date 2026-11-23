@@ -16,7 +16,8 @@
     ../../modules/system/core/locale.nix
     ../../modules/system/core/volume-fix.nix
     ../../modules/system/core/boot.nix
-    ../../modules/system/core/limine-theme.nix
+    ../../modules/system/core/grub.nix
+    ../../modules/system/core/vm-guest.nix
     ../../modules/system/core/fonts.nix
     ../../modules/system/apps/gaming.nix
     ../../modules/system/apps/steam.nix

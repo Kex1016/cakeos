@@ -160,6 +160,7 @@ The installer never edits module lists. It writes a `cakeos.*` block into `gen/c
 - `cakeos.groups` — `gaming`, `creative`, `development`, `office`, `communication`, `media`, `flatpak`
 - `cakeos.hardware` — `tablet`, `airpods`, `vpn`
 - `cakeos.kernel` — `cachyos` or `default`
+- `cakeos.virtualMachine` — `none`, `vmware` or `qemu`: detected, never asked
 - `cakeos.primaryUser`, `cakeos.autoLogin`, `cakeos.timeZone`, `cakeos.keyboardLayouts`
 
 A gated module is a plain `lib.mkIf (...) { ... }` wrapper around its whole body, so the host can
@@ -168,9 +169,17 @@ import everything unconditionally and let the install-time choice decide.
 ### Remaining shared modules (`modules/`)
 
 - `modules/system/core/` — locale/keyboard, boot splash, fonts, low-level fixes
-  - `limine-theme.nix` themes the installed system's Limine menu in haiiro (from `theme/`): a
-    still of the blobs behind one opaque panel, foam title, gold countdown. Everything is
-    `mkDefault`. `cakeos.limine.wallpaper` swaps the wallpaper (default: a 1920x1080 blobs still)
+  - `grub.nix` is the installed system's boot loader: GRUB with `efiSupport`, wearing the ISO's
+    haiiro theme (`theme.grubTheme`), so the boot menu matches the installer's. It boots BIOS and
+    UEFI alike: `disko-config.nix` adds a 1M BIOS boot partition (EF02) beside the ESP, and the
+    installer writes `boot.loader.grub.devices = [ <disk by-id> ]` into `gen/<config>.nix`; when it
+    ran under BIOS it also sets `canTouchEfiVariables = false` + `efiInstallAsRemovable`
+    (no EFI variables to write, which is what made the old Limine setup fail in VMware's default
+    BIOS mode). Older installs have no `devices` and keep `nodev` (EFI only). Limine is gone;
+    setting `cakeos.limine.wallpaper` is an error pointing here
+  - `vm-guest.nix` turns on guest integration from `cakeos.virtualMachine`, which the installer
+    sets from `systemd-detect-virt`: open-vm-tools for `vmware`, qemu-guest-agent and
+    spice-vdagentd for `qemu`
 - `modules/system/apps/` — optional system services gated on `cakeos.groups`/`cakeos.hardware`
   (steam, ntsync, gaming tweaks, vpn, tablet, librepods)
 - `modules/home/apps/` — always-on user packages (browsers, cli, essentials, extras)
@@ -199,8 +208,8 @@ import everything unconditionally and let the install-time choice decide.
   via getty. On any abnormal exit the script touches `/run/cakeos-installer-stopped`, which stops
   the next login from auto-starting it; `cake-install` clears the flag and relaunches, and a
   reboot clears it too since it lives on `/run`.
-- `theme.nix` builds the ISO look in haiiro from `theme/`: the GRUB menu (`grub-theme.nix`, a
-  blobs still behind a haiiro window, IBM VGA entries, Jacquard title, Unifont as `unifont.pf2`
+- `theme.nix` builds the ISO look in haiiro from `theme/`: the GRUB menu (`theme/grub-theme.nix`,
+  shared with installed systems: a blobs still behind a haiiro window, IBM VGA entries, Jacquard title, Unifont as `unifont.pf2`
   for the glyphs IBM VGA lacks), the 800x600 syslinux splash for BIOS boot, the console palette
   (Rosé Pine's terminal colours), a PSF2 console font (`theme.consoleFont`), and root's prompt.
   GRUB's PNG loader rejects palette PNGs, hence `png32:`/`png24:`.
@@ -249,7 +258,7 @@ import everything unconditionally and let the install-time choice decide.
 the boot loaders, the console). `haiiro.nix` is the palette, named as the design system's tokens.
 `blobs.py` draws the blobs background as one deterministic still, and `pixel.py`, `grub-art.py`,
 `syslinux-art.py` and `console-font.py` draw the boot art and console font. `import ./theme
-{ inherit pkgs; }` exports `haiiro`, `blobs { width, height, seed }`, `consoleFont` and `fonts`.
+{ inherit pkgs; }` exports `haiiro`, `blobs { width, height, seed }`, `grubTheme`, `consoleFont` and `fonts`.
 `cursor/` is the haiiro pixel cursor theme.
 
 ### Options added with the haiiro shell
@@ -286,7 +295,6 @@ the boot loaders, the console). `haiiro.nix` is the palette, named as the design
   The icloudpd password is read from the keyring, never from Nix.
 - `cakeos.cursor.enable` and `cakeos.cursor.size` (24, 32 or 48; `modules/home/apps/cursor.nix`):
   the haiiro pixel cursor as the default cursor. The hecate desktop turns it on.
-- `cakeos.limine.wallpaper` (`modules/system/core/limine-theme.nix`): see the Limine bullet above.
 
 ### Scripts
 

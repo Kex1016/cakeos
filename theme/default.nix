@@ -43,6 +43,19 @@ rec {
     unifontGrub = "${pkgs.grub2}/share/grub/unicode.pf2";
   };
 
+  # The GRUB theme (see grub-theme.nix), shared by the ISO and installed systems.
+  grubTheme = import ./grub-theme.nix {
+    inherit pkgs;
+    theme = {
+      inherit
+        python
+        art
+        haiiroJson
+        fonts
+        ;
+    };
+  };
+
   # The Linux console font: IBM VGA 8x16 with Latin Extended-A (and the glyphs
   # the installer's TUI draws) from Unifont, as a PSF2 with a Unicode table.
   # `console.font = "${theme.consoleFont}/share/consolefonts/haiiro.psf"`.

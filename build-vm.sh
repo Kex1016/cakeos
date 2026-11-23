@@ -155,8 +155,8 @@ if [ "$TARGET" = "installer" ]; then
     echo "Creating ephemeral install target ($DISK_SIZE) at $INSTALL_DISK..."
     with_tool qemu qemu-img create -f qcow2 "$INSTALL_DISK" "$DISK_SIZE"
 
-    # CakeOS boots via limine in EFI mode, so the VM has to be UEFI too or the
-    # installed system will not come up.
+    # UEFI, like most real machines. The installed system boots under BIOS too
+    # (GRUB with a BIOS boot partition), but the installer is tested this way.
     OVMF_PATH=$(nix build nixpkgs#OVMF.fd --no-link --print-out-paths)
 
     # The target disk is virtio-blk, not QEMU's default emulated IDE: IDE has
